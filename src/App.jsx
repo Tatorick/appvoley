@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Login from './pages/Auth/Login'
@@ -21,8 +21,8 @@ import { Loader2 } from 'lucide-react'
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth()
-    
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40}/></div>
+
+    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
     if (!user) return <Navigate to="/auth" replace />
 
     return children
@@ -31,8 +31,8 @@ const ProtectedRoute = ({ children }) => {
 // Auth Route Wrapper (Redirects if already logged in)
 const AuthRoute = ({ children }) => {
     const { user, loading } = useAuth()
-    
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40}/></div>
+
+    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
     if (user) return <Navigate to="/app" replace />
 
     return children
@@ -41,7 +41,7 @@ const AuthRoute = ({ children }) => {
 function AuthHandler() {
     const [searchParams] = useSearchParams()
     const mode = searchParams.get('mode')
-    
+
     if (mode === 'register') {
         return <RegisterClub />
     }
@@ -51,54 +51,54 @@ function AuthHandler() {
 
 
 function App() {
-  return (
-    <AuthProvider>
-        <Router>
-        <Routes>
-            <Route path="/" element={<Landing />} />
-            
-            {/* Auth Routes */}
-            <Route path="/auth" element={
-                <AuthRoute>
-                    <AuthHandler />
-                </AuthRoute>
-            } />
+    return (
+        <AuthProvider>
+            <Router>
+                <Routes>
+                    <Route path="/" element={<Landing />} />
 
-            <Route path="/register-club" element={
-                <AuthRoute>
-                    <RegisterClub />
-                </AuthRoute>
-            } />
+                    {/* Auth Routes */}
+                    <Route path="/auth" element={
+                        <AuthRoute>
+                            <AuthHandler />
+                        </AuthRoute>
+                    } />
 
-            {/* New /join route */}
-            {/* New /join route - Accessible by both guest and auth */}
-            <Route path="/join" element={<JoinClub />} />
-            
-            {/* Protected Routes */}
-            <Route path="/app" element={
-                <ProtectedRoute>
-                    <DashboardLayout />
-                </ProtectedRoute>
-            }>
-                <Route index element={<ClubHome />} />
-                <Route path="teams" element={<Teams />} />
-                <Route path="players" element={<Players />} />
-                <Route path="players/:id" element={<PlayerDetails />} />
-                <Route path="payments" element={<Payments />} />
-                <Route path="matchmaking" element={<Matchmaking />} />
-                <Route path="agenda" element={<Agenda />} />
-                <Route path="attendance" element={<Attendance />} />
-                <Route path="statistics" element={<Statistics />} />
-                <Route path="settings" element={<Settings />} />
-                {/* Add other routes here */}
-            </Route>
-            
-            {/* Catch all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </Router>
-    </AuthProvider>
-  )
+                    <Route path="/register-club" element={
+                        <AuthRoute>
+                            <RegisterClub />
+                        </AuthRoute>
+                    } />
+
+                    {/* New /join route */}
+                    {/* New /join route - Accessible by both guest and auth */}
+                    <Route path="/join" element={<JoinClub />} />
+
+                    {/* Protected Routes */}
+                    <Route path="/app" element={
+                        <ProtectedRoute>
+                            <DashboardLayout />
+                        </ProtectedRoute>
+                    }>
+                        <Route index element={<ClubHome />} />
+                        <Route path="teams" element={<Teams />} />
+                        <Route path="players" element={<Players />} />
+                        <Route path="players/:id" element={<PlayerDetails />} />
+                        <Route path="payments" element={<Payments />} />
+                        <Route path="matchmaking" element={<Matchmaking />} />
+                        <Route path="agenda" element={<Agenda />} />
+                        <Route path="attendance" element={<Attendance />} />
+                        <Route path="statistics" element={<Statistics />} />
+                        <Route path="settings" element={<Settings />} />
+                        {/* Add other routes here */}
+                    </Route>
+
+                    {/* Catch all */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </Router>
+        </AuthProvider>
+    )
 }
 
 export default App
