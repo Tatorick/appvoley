@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563EB;
+  --color-primary-dark: #1D4ED8;
+  --color-primary-light: #60A5FA;
+  
+  --color-secondary: #64748B;
+  --color-background: #F8FAFC;
+  --color-surface: #FFFFFF;
+  
+  --font-sans: "Inter", sans-serif;
+}
+
+/* Base styles using the new theme variables */
+body {
+  background-color: var(--color-background);
+  color: #0f172a; /* slate-900 equivalent */
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utilities if strictly needed, but typically v4 handles this */
