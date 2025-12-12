@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Save, Activity, TrendingUp, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
-export default function LogPerformanceModal({ isOpen, onClose, onSuccess, clubId, preselectedPlayerId = null }) {
+export default function LogPerformanceModal({ isOpen, onClose, onSuccess, clubId, preselectedPlayerId = null, preselectedPlayerName = null }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   
@@ -114,17 +114,22 @@ export default function LogPerformanceModal({ isOpen, onClose, onSuccess, clubId
                 <form id="perf-form" onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Jugador</label>
-                        <select 
-                            value={formData.player_id}
-                            onChange={e => setFormData({...formData, player_id: e.target.value})}
-                            disabled={!!preselectedPlayerId}
-                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500/20 disabled:opacity-50"
-                        >
-                            <option value="">Seleccionar Jugador...</option>
-                            {players.map(p => (
-                                <option key={p.id} value={p.id}>{p.nombre_completo} ({p.posicion})</option>
-                            ))}
-                        </select>
+                        {preselectedPlayerId ? (
+                             <div className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-700">
+                                {preselectedPlayerName || players.find(p => p.id === preselectedPlayerId)?.nombre_completo || 'Cargando...'}
+                             </div>
+                        ) : (
+                            <select 
+                                value={formData.player_id}
+                                onChange={e => setFormData({...formData, player_id: e.target.value})}
+                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500/20 disabled:opacity-50"
+                            >
+                                <option value="">Seleccionar Jugador...</option>
+                                {players.map(p => (
+                                    <option key={p.id} value={p.id}>{p.nombre_completo} ({p.posicion})</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

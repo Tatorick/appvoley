@@ -5,6 +5,7 @@ import {
   User, Mail, Lock, Building2, MapPin, 
   Phone, FileText, ArrowRight, Loader2, CheckCircle2, AlertCircle 
 } from 'lucide-react'
+import { validatePhone, validateId } from '../../utils/validations'
 
 export default function RegisterClub() {
   const navigate = useNavigate()
@@ -22,53 +23,10 @@ export default function RegisterClub() {
     // Club
     clubName: '',
     city: '',
-    country: 'Perú', // Default
+    country: '', // Manual input
     phone: '',
     rucDni: ''
   })
-
-  // Helpers for Ecuador Validation
-  const validatePhone = (phone) => {
-     if (!phone) return true // Allow empty here, required check is separate or handled by browser constraint if type=required
-     const clean = phone.replace(/\D/g, '')
-     if (/^5939\d{8}$/.test(clean)) return true
-     if (/^09\d{8}$/.test(clean)) return true
-     return false
-  }
-
-  const validateId = (id) => {
-      if (!id) return true
-      const clean = id.replace(/\D/g, '')
-      
-      if (clean.length !== 10 && clean.length !== 13) return false
-
-      const province = parseInt(clean.substring(0, 2), 10)
-      if (province < 1 || province > 24) {
-          if (province !== 30) return false
-      }
-
-      const thirdDigit = parseInt(clean.substring(2, 3), 10)
-      if (thirdDigit < 6) {
-          let sum = 0
-          const coefficients = [2, 1, 2, 1, 2, 1, 2, 1, 2]
-          for (let i = 0; i < 9; i++) {
-              let val = parseInt(clean.charAt(i), 10) * coefficients[i]
-              if (val >= 10) val -= 9
-              sum += val
-          }
-          const checkDigit = parseInt(clean.charAt(9), 10)
-          const result = sum % 10 === 0 ? 0 : 10 - (sum % 10)
-          if (result !== checkDigit) return false
-      }
-      
-      if (clean.length === 13) {
-          if (!clean.endsWith('001') && !clean.endsWith('002') && !clean.endsWith('003')) {
-               return true 
-          }
-      }
-
-      return true
-  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -292,7 +250,20 @@ export default function RegisterClub() {
                             />
                         </div>
                     </div>
+
                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-medium text-slate-700 block mb-1">País</label>
+                            <div className="relative">
+                                <Globe className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                                <input 
+                                    type="text" name="country" required
+                                    value={formData.country} onChange={handleChange}
+                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                    placeholder="Perú"
+                                />
+                            </div>
+                        </div>
                         <div>
                             <label className="text-sm font-medium text-slate-700 block mb-1">Ciudad</label>
                             <div className="relative">
@@ -305,6 +276,9 @@ export default function RegisterClub() {
                                 />
                             </div>
                         </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-medium text-slate-700 block mb-1">Teléfono</label>
                             <div className="relative">
@@ -318,19 +292,19 @@ export default function RegisterClub() {
                             </div>
                             {fieldErrors.phone && <p className="text-xs text-red-500 mt-1 font-medium">{fieldErrors.phone}</p>}
                         </div>
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium text-slate-700 block mb-1">RUC / DNI (Identificador)</label>
-                        <div className="relative">
-                            <FileText className="absolute left-3 top-3.5 text-slate-400" size={18} />
-                            <input 
-                                type="text" name="rucDni"
-                                value={formData.rucDni} onChange={handleChange} onBlur={handleBlur}
-                                className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${fieldErrors.rucDni ? 'border-red-500' : 'border-slate-200'}`}
-                                placeholder="10203040..."
-                            />
+                        <div>
+                            <label className="text-sm font-medium text-slate-700 block mb-1">RUC / DNI</label>
+                            <div className="relative">
+                                <FileText className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                                <input 
+                                    type="text" name="rucDni"
+                                    value={formData.rucDni} onChange={handleChange} onBlur={handleBlur}
+                                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${fieldErrors.rucDni ? 'border-red-500' : 'border-slate-200'}`}
+                                    placeholder="Doc. Identidad"
+                                />
+                            </div>
+                            {fieldErrors.rucDni && <p className="text-xs text-red-500 mt-1 font-medium">{fieldErrors.rucDni}</p>}
                         </div>
-                        {fieldErrors.rucDni && <p className="text-xs text-red-500 mt-1 font-medium">{fieldErrors.rucDni}</p>}
                     </div>
                  </div>
             )}

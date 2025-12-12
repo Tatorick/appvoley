@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { BarChart3, TrendingUp, Users, Ruler, Activity, Trophy, PieChart } from 'lucide-react'
+import { BarChart3, TrendingUp, Users, Ruler, Activity, Trophy, PieChart, Plus, Calendar } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
+import RegisterMatchResultModal from '../../components/Modals/RegisterMatchResultModal'
 
 export default function Statistics() {
   const { club, loading: clubLoading } = useClubData()
@@ -9,6 +10,7 @@ export default function Statistics() {
   const [matches, setMatches] = useState([])
   const [players, setPlayers] = useState([])
   const [teams, setTeams] = useState([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
   
   // const [activeTab, setActiveTab] = useState('general') // Removed unused for now
 
@@ -88,14 +90,23 @@ export default function Statistics() {
   if (clubLoading || loading) return <div className="p-10 text-center">Cargando...</div>
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
         
         {/* Header */}
-        <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                <BarChart3 className="text-primary" /> Estadísticas
-            </h1>
-            <p className="text-slate-500 text-sm">Análisis de rendimiento y demografía del club.</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <BarChart3 className="text-primary" /> Estadísticas
+                </h1>
+                <p className="text-slate-500 text-sm">Análisis de rendimiento y demografía del club.</p>
+            </div>
+            
+            <button 
+                onClick={() => setIsModalOpen(true)}
+                className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20 flex items-center gap-2"
+            >
+                <Plus size={20} /> Registrar Resultado
+            </button>
         </div>
 
         {/* General Overview Cards */}
@@ -185,6 +196,53 @@ export default function Statistics() {
                 </table>
             </div>
         </div>
+
+        {/* RECENT MATCHES LIST (NEW) */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                    <Trophy size={20} className="text-primary"/> Últimos Partidos Registrados
+                </h3>
+            </div>
+            <div className="divide-y divide-slate-50">
+                {matches.filter(m => m.status === 'completed').slice(0, 5).map(m => {
+                    const teamName = teams.find(t => t.id === m.team_id)?.nombre || 'Equipo'
+                    const isWin = m.score_us > m.score_them
+                    return (
+                        <div key={m.id} className="p-4 hover:bg-slate-50/50 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${isWin ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {isWin ? 'W' : 'L'}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-slate-800 flex flex-col md:flex-row md:items-center md:gap-2">
+                                        {teamName} <span className="text-slate-300 hidden md:inline">vs</span> <span className="text-slate-600">{m.opponent_name}</span>
+                                    </p>
+                                    <p className="text-xs text-slate-400 flex items-center gap-2">
+                                        <Calendar size={12}/> {new Date(m.date).toLocaleDateString()}
+                                        {m.tournament_name && <span className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-bold text-slate-500 uppercase">{m.tournament_name}</span>}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xl font-bold text-slate-900">{m.score_us} - {m.score_them}</p>
+                                <p className="text-xs text-slate-400">{m.set_scores}</p>
+                            </div>
+                        </div>
+                    )
+                })}
+                 {matches.filter(m => m.status === 'completed').length === 0 && (
+                    <div className="p-8 text-center text-slate-400 italic">No hay historial de partidos.</div>
+                )}
+            </div>
+        </div>
+
+        <RegisterMatchResultModal 
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSuccess={() => { fetchData(); setIsModalOpen(false); }}
+            clubId={club?.id}
+        />
     </div>
   )
 }

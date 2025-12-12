@@ -70,10 +70,28 @@ export default function Players() {
   // Helpers
   const calculateAge = (dob) => {
     if (!dob) return '-'
-    const birthday = new Date(dob)
-    const ageDifMs = Date.now() - birthday.getTime()
-    const ageDate = new Date(ageDifMs)
+    const diff = Date.now() - new Date(dob).getTime()
+    const ageDate = new Date(diff)
     return Math.abs(ageDate.getUTCFullYear() - 1970)
+  }
+
+  const handleDeletePlayer = async (playerId) => {
+      if (!confirm('¿Estás seguro de que quieres eliminar a este jugador? Esta acción no se puede deshacer y borrará todos sus datos.')) return
+
+      try {
+          const { error } = await supabase
+              .from('players')
+              .delete()
+              .eq('id', playerId)
+          
+          if (error) throw error
+          
+          // Refresh
+          fetchData()
+      } catch (err) {
+          console.error('Error deleting player:', err)
+          alert('Error al eliminar jugador. Intenta de nuevo.')
+      }
   }
 
   if (clubLoading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
@@ -206,7 +224,10 @@ export default function Players() {
                                                 >
                                                     <Edit2 size={16} />
                                                 </button>
-                                                <button className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg text-slate-400 hover:text-red-600 transition-all shadow-sm">
+                                                <button 
+                                                    onClick={() => handleDeletePlayer(player.id)}
+                                                    className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg text-slate-400 hover:text-red-600 transition-all shadow-sm"
+                                                >
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>

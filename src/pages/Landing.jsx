@@ -12,9 +12,15 @@ export default function Landing() {
             VoleyManager
           </div>
           <div className="flex gap-4">
+            <Link 
+              to="/portal" 
+              className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-900 transition-colors font-bold text-sm"
+            >
+              Soy Jugador
+            </Link>
              <Link 
               to="/auth" 
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-slate-700 hover:text-primary transition-colors font-medium"
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-slate-700 hover:text-primary transition-colors font-medium border border-transparent hover:border-primary/10"
             >
               <LogIn size={20} />
               Ingresar

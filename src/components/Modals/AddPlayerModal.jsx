@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Save, AlertCircle, Loader2, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { validateId } from '../../utils/validations'
 
 export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
   const { user } = useAuth()
@@ -15,6 +16,7 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
+    dni: '', // Cédula
     dob: '',
     gender: 'Femenino', // Default
     height: '',
@@ -34,6 +36,7 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
         setFormData({
             first_name: '',
             last_name: '',
+            dni: '',
             dob: '',
             gender: 'Femenino',
             height: '',
@@ -87,6 +90,11 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
 
     try {
         if (!clubId) throw new Error("No se pudo identificar el club.")
+        
+        // Validate ID
+        if (formData.dni && !validateId(formData.dni)) {
+             throw new Error("La Cédula de Identidad ingresada no es válida (Ecuador).")
+        }
 
         // 1. Insert Player (Core Data)
         const { data: playerData, error: insertError } = await supabase
@@ -94,6 +102,7 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
             .insert({
                 first_name: formData.first_name,
                 last_name: formData.last_name,
+                dni: formData.dni,
                 dob: formData.dob,
                 gender: formData.gender,
                 height: formData.height ? parseInt(formData.height) : null,
@@ -189,7 +198,7 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                                 placeholder="Ej. Juan Carlos"
                                 value={formData.first_name}
-                                onChange={e => setFormData({...formData, first_name: e.target.value})}
+                                onChange={e => setFormData({...formData, first_name: e.target.value.toUpperCase()})}
                             />
                         </div>
                         <div>
@@ -199,7 +208,17 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                                 placeholder="Ej. Pérez López"
                                 value={formData.last_name}
-                                onChange={e => setFormData({...formData, last_name: e.target.value})}
+                                onChange={e => setFormData({...formData, last_name: e.target.value.toUpperCase()})}
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                             <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Cédula de Identidad</label>
+                             <input 
+                                type="text"
+                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                                placeholder="1712345678"
+                                value={formData.dni}
+                                onChange={e => setFormData({...formData, dni: e.target.value})}
                             />
                         </div>
                         <div>

@@ -3,7 +3,7 @@ import { X, DollarSign, Tag, User } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 
-export default function RegisterTransactionModal({ isOpen, onClose, onSuccess, clubId, preselectedPlayer = null }) {
+export default function RegisterTransactionModal({ isOpen, onClose, onSuccess, clubId, preselectedPlayer = null, preselectedMonth = null, preselectedCategory = null }) {
     const { user } = useAuth()
     const [loading, setLoading] = useState(false)
     const [players, setPlayers] = useState([])
@@ -14,6 +14,7 @@ export default function RegisterTransactionModal({ isOpen, onClose, onSuccess, c
         description: '',
         category: 'Varios',
         date: new Date().toISOString().split('T')[0],
+        payment_month: new Date().toISOString().slice(0, 7), // YYYY-MM
         player_id: ''
     })
 
@@ -29,24 +30,36 @@ export default function RegisterTransactionModal({ isOpen, onClose, onSuccess, c
         if (isOpen) {
              // Reset or Preset
              if (preselectedPlayer) {
-                 setFormData({
-                     type: 'income',
-                     amount: '', // User enters amount
-                     description: `Cuota Mensual - ${preselectedPlayer.first_name} ${preselectedPlayer.last_name}`,
-                     category: 'Cuotas',
-                     date: new Date().toISOString().split('T')[0],
-                     player_id: preselectedPlayer.id
-                 })
+                     setFormData({
+                         type: 'income',
+                         amount: '', // User enters amount
+                         description: preselectedCategory === 'Matrícula' ? `Matrícula ${new Date().getFullYear()}` : 
+                                      preselectedCategory === 'Uniformes' ? 'Uniforme' :
+                                      `Cuota Mensual - ${preselectedPlayer.first_name} ${preselectedPlayer.last_name}`,
+                         category: preselectedCategory || 'Cuotas',
+                         date: new Date().toISOString().split('T')[0],
+                         payment_month: preselectedMonth ? preselectedMonth.slice(0, 7) : new Date().toISOString().slice(0, 7),
+                         player_id: preselectedPlayer.id
+                     })
              } else {
-                setFormData(prev => ({ ...prev, description: '', amount: '', player_id: '' }))
+                setFormData(prev => ({ 
+                    ...prev, 
+                    description: '', 
+                    amount: '', 
+                    player_id: '',
+                    payment_month: new Date().toISOString().slice(0, 7)
+                }))
              }
         }
-    }, [isOpen, clubId, preselectedPlayer, fetchPlayers])
+    }, [isOpen, clubId, preselectedPlayer, fetchPlayers, preselectedMonth, preselectedCategory])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
         try {
+            // Convert YYYY-MM to YYYY-MM-01 for DB
+            const paymentMonthDate = formData.payment_month ? `${formData.payment_month}-01` : null
+
             const { error } = await supabase.from('treasury_movements').insert({
                 club_id: clubId,
                 type: formData.type,
@@ -54,6 +67,7 @@ export default function RegisterTransactionModal({ isOpen, onClose, onSuccess, c
                 description: formData.description,
                 category: formData.category,
                 date: formData.date,
+                payment_month: paymentMonthDate,
                 player_id: formData.player_id || null,
                 created_by: user.id
             })
@@ -148,7 +162,9 @@ export default function RegisterTransactionModal({ isOpen, onClose, onSuccess, c
                                     onChange={e => setFormData({...formData, category: e.target.value})}
                                 >
                                     <option value="Varios">Varios</option>
-                                    <option value="Cuotas">Cuotas</option>
+                                    <option value="Cuotas">Cuotas Mensuales</option>
+                                    <option value="Matrícula">Matrícula Anual</option>
+                                    <option value="Uniformes">Uniformes / Indumentaria</option>
                                     <option value="Torneos">Torneos</option>
                                     <option value="Material">Material</option>
                                     <option value="Sueldos">Sueldos</option>
@@ -158,7 +174,7 @@ export default function RegisterTransactionModal({ isOpen, onClose, onSuccess, c
                             </div>
                         </div>
                         <div>
-                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
+                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Pago</label>
                              <input 
                                 required
                                 type="date"
@@ -168,6 +184,21 @@ export default function RegisterTransactionModal({ isOpen, onClose, onSuccess, c
                             />
                         </div>
                     </div>
+
+                    {/* Mes Correspondiente (Visible mainly for Income/Cuotas) */}
+                    {formData.type === 'income' && formData.category === 'Cuotas' && (
+                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                             <label className="block text-xs font-bold text-blue-800 uppercase mb-1">Mes que se está pagando</label>
+                             <input 
+                                type="month"
+                                required
+                                className="w-full p-2 bg-white border border-blue-200 rounded-lg text-sm font-bold text-blue-900"
+                                value={formData.payment_month}
+                                onChange={e => setFormData({...formData, payment_month: e.target.value})}
+                            />
+                            <p className="text-[10px] text-blue-600 mt-1">Selecciona el mes que este pago debe cubrir en el historial.</p>
+                        </div>
+                    )}
 
                     {/* Player Selection (Only for Income) */}
                     {formData.type === 'income' && !preselectedPlayer && (

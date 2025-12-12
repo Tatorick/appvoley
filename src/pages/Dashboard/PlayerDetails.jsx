@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import PlayerStats from '../../components/Dashboard/PlayerStats'
+import { validateId } from '../../utils/validations'
+import RegisterTransactionModal from '../../components/Modals/RegisterTransactionModal'
 
 export default function PlayerDetails() {
   const { id } = useParams()
@@ -81,7 +83,8 @@ export default function PlayerDetails() {
         {/* Tabs */}
         <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
             <TabButton active={activeTab === 'general'} onClick={() => setActiveTab('general')} icon={User} label="Perfil General" />
-            <TabButton active={activeTab === 'evolution'} onClick={() => setActiveTab('evolution')} icon={TrendingUp} label="Evolución (Tests)" />
+            <TabButton active={activeTab === 'evolution'} onClick={() => setActiveTab('evolution')} icon={TrendingUp} label="Evolución" />
+            <TabButton active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} icon={DollarSign} label="Pagos" />
             <TabButton active={activeTab === 'physical'} onClick={() => setActiveTab('physical')} icon={Activity} label="Ficha Física" />
             <TabButton active={activeTab === 'medical'} onClick={() => setActiveTab('medical')} icon={FileText} label="Ficha Médica" />
         </div>
@@ -89,7 +92,8 @@ export default function PlayerDetails() {
         {/* Content */}
         <div className="min-h-[400px]">
             {activeTab === 'general' && <GeneralTab player={player} assignments={player.team_assignments} refresh={fetchPlayerDetails} />}
-            {activeTab === 'evolution' && <PlayerStats playerId={player.id} clubId={player.club_id} />}
+            {activeTab === 'evolution' && <PlayerStats playerId={player.id} clubId={player.club_id} playerName={`${player.first_name} ${player.last_name}`} />}
+            {activeTab === 'payments' && <PaymentsTab player={player} />}
             {activeTab === 'medical' && <MedicalTab playerId={player.id} medicalData={medical} injuries={injuries} refresh={fetchPlayerDetails} />}
             {activeTab === 'physical' && <PhysicalTab playerId={player.id} assessments={assessments} refresh={fetchPlayerDetails} />}
         </div>
@@ -102,7 +106,7 @@ function TabButton({ active, onClick, icon: Icon, label }) {
         <button 
             onClick={onClick}
             className={`
-                flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-all
+                flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-all whitespace-nowrap
                 ${active 
                     ? 'border-primary text-primary' 
                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
@@ -115,13 +119,266 @@ function TabButton({ active, onClick, icon: Icon, label }) {
     )
 }
 
-// --- Sub Components Placeholders (Will implement logic in next steps or inline if simple) ---
+// --- Payments Tab ---
+
+function PaymentsTab({ player }) {
+    const [year, setYear] = useState(new Date().getFullYear())
+    const [payments, setPayments] = useState([])
+    const [loading, setLoading] = useState(true)
+    
+    // Modal
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [selectedMonth, setSelectedMonth] = useState(null) // 'YYYY-MM'
+    const [selectedCategory, setSelectedCategory] = useState(null)
+
+    const fetchPayments = async () => {
+        setLoading(true)
+        try {
+            const startOfYear = `${year}-01-01`
+            const endOfYear = `${year}-12-31`
+
+            const { data, error } = await supabase
+                .from('treasury_movements')
+                .select('*')
+                .eq('player_id', player.id)
+                .eq('type', 'income')
+                .or(`payment_month.gte.${startOfYear},and(payment_month.lte.${endOfYear}),date.gte.${startOfYear},and(date.lte.${endOfYear})`)
+            
+            // Note: The OR logic above might be mixed. Simpler: fetch all incomes for player, filter in JS.
+            // But let's refine the query: we want mainly payment_month matches.
+            // If payment_month is null, fallback to date.
+            
+            if (error) throw error
+            setPayments(data || [])
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchPayments()
+    }, [player.id, year])
+
+    const months = [
+        'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ]
+
+    const getMonthStatus = (monthIndex) => {
+        const currentYear = new Date().getFullYear()
+        const currentMonth = new Date().getMonth() // 0-11
+        
+        // Target "YYYY-MM"
+        const targetMonthStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+        
+        // Find payment
+        const payment = payments.find(p => {
+            if (p.payment_month) {
+                return p.payment_month.startsWith(targetMonthStr)
+            } else {
+                return p.date.startsWith(targetMonthStr)
+            }
+        })
+
+        if (payment) return { status: 'paid', date: payment.date, amount: payment.amount }
+        
+        if (year < currentYear || (year === currentYear && monthIndex < currentMonth)) {
+            return { status: 'overdue' }
+        }
+        
+        if (year === currentYear && monthIndex === currentMonth) {
+            return { status: 'current' } 
+        }
+
+        return { status: 'future' }
+    }
+
+    const handleMonthClick = (monthIndex) => {
+        const targetStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}` // YYYY-MM
+        setSelectedMonth(targetStr)
+        setIsModalOpen(true)
+    }
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+            {/* Header / Year Selector */}
+            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => setYear(y => y - 1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                        <ChevronLeft size={20}/>
+                    </button>
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Calendar className="text-primary"/> {year}
+                    </h3>
+                    <button onClick={() => setYear(y => y + 1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                        <ChevronRight size={20}/>
+                    </button>
+                </div>
+                <div className="text-sm text-slate-500 font-medium hidden sm:block">
+                    Historial de Cuotas
+                </div>
+            </div>
+
+            {/* Matrícula & Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {/* Matrículas Card */}
+                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h4 className="text-slate-500 font-bold text-xs uppercase tracking-wide mb-1">Matrícula {year}</h4>
+                        {(() => {
+                            const matricula = payments.find(p => p.category === 'Matrícula' && p.date.startsWith(String(year)))
+                            if (matricula) {
+                                return (
+                                    <div>
+                                        <div className="flex items-center gap-2 text-green-600 font-bold text-xl">
+                                            <CheckCircle size={24} /> PAGADA
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-1">Registrada el {new Date(matricula.date).toLocaleDateString()}</p>
+                                    </div>
+                                )
+                            } else {
+                                return (
+                                    <div>
+                                        <div className={`flex items-center gap-2 font-bold text-xl ${year < 2026 && year === new Date().getFullYear() ? 'text-slate-400' : 'text-red-500'}`}>
+                                            {year < 2026 && year === new Date().getFullYear() ? 'NO APLICA' : (
+                                                <><AlertCircle size={24} /> PENDIENTE</>
+                                            )}
+                                        </div>
+                                        {year >= 2026 && (
+                                            <button 
+                                                onClick={() => { setSelectedCategory('Matrícula'); setIsModalOpen(true); }}
+                                                className="mt-3 w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-primary transition-colors"
+                                            >
+                                                Registrar Pago
+                                            </button>
+                                        )}
+                                    </div>
+                                )
+                            }
+                        })()}
+                    </div>
+                 </div>
+
+                 {/* Uniforms / Extras Summary */}
+                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                    <h4 className="text-slate-500 font-bold text-xs uppercase tracking-wide mb-3">Uniformes e Indumentaria ({year})</h4>
+                    <div className="space-y-2">
+                        {payments.filter(p => p.category === 'Uniformes' || p.category === 'Material').length === 0 ? (
+                            <p className="text-sm text-slate-400 italic">No hay registros este año.</p>
+                        ) : (
+                            payments.filter(p => p.category === 'Uniformes' || p.category === 'Material').map(p => (
+                                <div key={p.id} className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-700">{p.description}</p>
+                                        <p className="text-xs text-slate-500">{new Date(p.date).toLocaleDateString()}</p>
+                                    </div>
+                                    <span className="font-mono font-bold text-green-600">+${p.amount}</span>
+                                </div>
+                            ))
+                        )}
+                        <button 
+                            onClick={() => { setSelectedCategory('Uniformes'); setIsModalOpen(true); }}
+                            className="w-full mt-2 py-1.5 border border-dashed border-slate-300 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-50 hover:text-slate-700 transition-colors"
+                        >
+                            + Agregar Item
+                        </button>
+                    </div>
+                 </div>
+            </div>
+
+            {/* Grid */}
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide mt-4">Cuotas Mensuales</h3>
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {months.map((m, i) => {
+                    const { status, date, amount } = getMonthStatus(i)
+                    
+                    let bg = 'bg-slate-50 border-slate-200'
+                    let text = 'text-slate-400'
+                    
+                    if (status === 'paid') {
+                        bg = 'bg-yellow-400 border-yellow-500 text-slate-900 shadow-sm'
+                        text = 'text-slate-900'
+                    } else if (status === 'overdue') {
+                        if (year >= 2026 || (year === 2025 && i < new Date().getMonth() && false)) { // Disable overdue style for 2025 as per user request
+                             bg = 'bg-red-500 border-red-600 text-white'
+                             text = 'text-white'
+                        } else {
+                             // Soft overdue for 2025 (or just look like future/pending)
+                             bg = 'bg-slate-100 border-slate-200'
+                        }
+                    } else if (status === 'current') {
+                        bg = 'bg-yellow-100 border-yellow-300'
+                        text = 'text-yellow-800'
+                    }
+
+                    return (
+                        <button 
+                            key={m}
+                            disabled={status === 'paid'}
+                            onClick={() => { setSelectedCategory('Cuotas'); handleMonthClick(i); }}
+                            className={`
+                                relative p-2 rounded-xl border-2 transition-all duration-200 
+                                flex flex-col items-center justify-center gap-1 h-24
+                                ${bg} 
+                                ${status !== 'paid' ? 'hover:scale-105 cursor-pointer' : 'cursor-default'}
+                            `}
+                        >
+                            <span className={`text-sm font-bold uppercase ${text}`}>{m}</span>
+                            
+                             {status === 'paid' && (
+                                <div className="flex flex-col items-center">
+                                    <CheckCircle size={16} className="text-slate-900/50 mb-1"/>
+                                </div>
+                             )}
+                             
+                             {status === 'overdue' && year >= 2026 && (
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[10px] font-bold bg-white/20 px-1 rounded">PENDIENTE</span>
+                                </div>
+                             )}
+
+                             {status === 'future' && (
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[10px] text-slate-300">-</span>
+                                </div>
+                             )}
+                        </button>
+                    )
+                })}
+            </div>
+
+            <RegisterTransactionModal 
+                isOpen={isModalOpen}
+                onClose={() => { setIsModalOpen(false); setSelectedCategory(null); }}
+                onSuccess={() => { fetchPayments(); setIsModalOpen(false); setSelectedCategory(null); }}
+                clubId={player.club_id}
+                preselectedPlayer={player}
+                preselectedMonth={selectedMonth}
+                preselectedCategory={selectedCategory}
+            />
+        </div>
+    )
+}
 
 function GeneralTab({ player, assignments, refresh }) {
     const { user } = useAuth()
     const [allTeams, setAllTeams] = useState([])
     const [isAdding, setIsAdding] = useState(false)
     const [loading, setLoading] = useState(false)
+    
+    // Edit Mode State
+    const [editing, setEditing] = useState(false)
+    const [formData, setFormData] = useState({
+        first_name: player.first_name,
+        last_name: player.last_name,
+        dni: player.dni || '',
+        dob: player.dob,
+        gender: player.gender,
+        height: player.height || '',
+        position: player.position || ''
+    })
 
     // Calculate Age
     const age = player.dob ? new Date().getFullYear() - new Date(player.dob).getFullYear() : '?'
@@ -137,6 +394,37 @@ function GeneralTab({ player, assignments, refresh }) {
             .select('*, categories(nombre, edad_max, edad_min)')
             .eq('club_id', player.club_id)
         setAllTeams(data || [])
+    }
+
+    const handleSaveInfo = async () => {
+        setLoading(true)
+        try {
+            // Validate DNI if present
+            if (formData.dni && !validateId(formData.dni)) {
+                throw new Error("La Cédula de Identidad no es válida.")
+            }
+
+            const { error } = await supabase
+                .from('players')
+                .update({
+                    first_name: formData.first_name,
+                    last_name: formData.last_name,
+                    dni: formData.dni,
+                    dob: formData.dob,
+                    gender: formData.gender,
+                    height: formData.height ? parseInt(formData.height) : null,
+                    position: formData.position
+                })
+                .eq('id', player.id)
+
+            if (error) throw error
+            setEditing(false)
+            refresh()
+        } catch (err) {
+            alert(err.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
     const availableTeams = allTeams.filter(t => !assignments.some(a => a.teams?.id === t.id))
@@ -186,26 +474,114 @@ function GeneralTab({ player, assignments, refresh }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="md:col-span-2 space-y-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                    <h3 className="font-bold text-slate-900 mb-4">Información Personal</h3>
-                    <div className="grid grid-cols-2 gap-y-4 text-sm">
-                        <div>
-                            <span className="block text-slate-400 text-xs uppercase mb-1">Nacimiento</span>
-                            <span className="font-medium text-slate-700">{player.dob} ({age} años)</span>
-                        </div>
-                         <div>
-                            <span className="block text-slate-400 text-xs uppercase mb-1">Género</span>
-                            <span className="font-medium text-slate-700">{player.gender}</span>
-                        </div>
-                         <div>
-                            <span className="block text-slate-400 text-xs uppercase mb-1">Altura</span>
-                            <span className="font-medium text-slate-700">{player.height} cm</span>
-                        </div>
-                         <div>
-                            <span className="block text-slate-400 text-xs uppercase mb-1">Posición</span>
-                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-bold inline-block">
-                                {player.position}
-                            </span>
-                        </div>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-slate-900">Información Personal</h3>
+                        {!editing ? (
+                            <button 
+                                onClick={() => setEditing(true)}
+                                className="text-sm font-bold text-primary hover:bg-slate-50 px-3 py-1.5 rounded transition-colors flex items-center gap-2"
+                            >
+                                <Edit2 size={16}/> Editar
+                            </button>
+                        ) : (
+                            <div className="flex gap-2">
+                                <button onClick={() => setEditing(false)} className="text-sm text-slate-500 hover:text-slate-700 font-medium">Cancelar</button>
+                                <button onClick={handleSaveInfo} disabled={loading} className="text-sm bg-primary text-white px-3 py-1 rounded font-bold hover:bg-primary-dark">
+                                    {loading ? 'Guardando...' : 'Guardar'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                        {editing ? (
+                             <>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Nombres</label>
+                                    <input 
+                                        type="text" className="w-full p-2 border rounded font-bold text-slate-700"
+                                        value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value.toUpperCase()})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Apellidos</label>
+                                    <input 
+                                        type="text" className="w-full p-2 border rounded font-bold text-slate-700"
+                                        value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value.toUpperCase()})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Fecha Nacimiento</label>
+                                    <input 
+                                        type="date" className="w-full p-2 border rounded font-medium text-slate-700"
+                                        value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Cédula / DNI</label>
+                                    <input 
+                                        type="text" className="w-full p-2 border rounded font-medium text-slate-700"
+                                        value={formData.dni} onChange={e => setFormData({...formData, dni: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Género</label>
+                                    <select 
+                                        className="w-full p-2 border rounded font-medium text-slate-700"
+                                        value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})}
+                                    >
+                                        <option value="Femenino">Femenino</option>
+                                        <option value="Masculino">Masculino</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Altura (cm)</label>
+                                    <input 
+                                        type="number" className="w-full p-2 border rounded font-medium text-slate-700"
+                                        value={formData.height} onChange={e => setFormData({...formData, height: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Posición</label>
+                                    <select 
+                                        className="w-full p-2 border rounded font-medium text-slate-700"
+                                        value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})}
+                                    >
+                                        <option value="Punta">Punta</option>
+                                        <option value="Opuesto">Opuesto</option>
+                                        <option value="Central">Central</option>
+                                        <option value="Armador">Armador</option>
+                                        <option value="Libero">Libero</option>
+                                        <option value="Universal">Universal</option>
+                                    </select>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div>
+                                    <span className="block text-slate-400 text-xs uppercase mb-1">Nacimiento</span>
+                                    <span className="font-medium text-slate-700">{player.dob} ({age} años)</span>
+                                </div>
+                                <div>
+                                    <span className="block text-slate-400 text-xs uppercase mb-1">Cédula / DNI</span>
+                                    <span className="font-medium text-slate-700">{player.dni || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-slate-400 text-xs uppercase mb-1">Género</span>
+                                    <span className="font-medium text-slate-700">{player.gender}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-slate-400 text-xs uppercase mb-1">Altura</span>
+                                    <span className="font-medium text-slate-700">{player.height} cm</span>
+                                </div>
+                                <div>
+                                    <span className="block text-slate-400 text-xs uppercase mb-1">Posición</span>
+                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-bold inline-block">
+                                        {player.position}
+                                    </span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

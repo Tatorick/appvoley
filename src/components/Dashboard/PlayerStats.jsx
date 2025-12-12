@@ -3,7 +3,7 @@ import { Activity, TrendingUp, TrendingDown, Minus, Zap, BrainCircuit, Plus } fr
 import { supabase } from '../../lib/supabase'
 import LogPerformanceModal from '../../components/Modals/LogPerformanceModal'
 
-export default function PlayerStats({ playerId, clubId }) {
+export default function PlayerStats({ playerId, clubId, playerName }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -196,6 +196,7 @@ export default function PlayerStats({ playerId, clubId }) {
             onSuccess={fetchLogs}
             clubId={clubId}
             preselectedPlayerId={playerId}
+            preselectedPlayerName={playerName}
         />
     </div>
   )

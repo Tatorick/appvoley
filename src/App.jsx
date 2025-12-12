@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Login from './pages/Auth/Login'
@@ -16,6 +16,10 @@ import Attendance from './pages/Dashboard/Attendance'
 import Statistics from './pages/Dashboard/Statistics'
 import Payments from './pages/Dashboard/Payments'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import PortalLogin from './pages/Portal/PortalLogin'
+import PortalDashboard from './pages/Portal/PortalDashboard'
+import AdminLayout from './layouts/AdminLayout'
+import AdminDashboard from './pages/Admin/AdminDashboard'
 import { Loader2 } from 'lucide-react'
 
 // Protected Route Component
@@ -52,12 +56,17 @@ function AuthHandler() {
 
 function App() {
   return (
-    <AuthProvider>
-        <Router>
+    <Router>
+      <AuthProvider>
         <Routes>
-            <Route path="/" element={<Landing />} />
-            
-            {/* Auth Routes */}
+          {/* Public Website */}
+          <Route path="/" element={<Landing />} />
+          
+          {/* Public Player Portal */}
+          <Route path="/portal" element={<PortalLogin />} />
+          <Route path="/portal/dashboard" element={<PortalDashboard />} />
+
+          {/* Auth Routes */}
             <Route path="/auth" element={
                 <AuthRoute>
                     <AuthHandler />
@@ -74,7 +83,16 @@ function App() {
             {/* New /join route - Accessible by both guest and auth */}
             <Route path="/join" element={<JoinClub />} />
             
-            {/* Protected Routes */}
+            {/* Super Admin Routes */}
+          <Route path="/admin" element={
+              <ProtectedRoute>
+                  <AdminLayout />
+              </ProtectedRoute>
+          }>
+              <Route index element={<AdminDashboard />} />
+          </Route>
+
+          {/* Protected Routes (Dashboard) */}
             <Route path="/app" element={
                 <ProtectedRoute>
                     <DashboardLayout />
@@ -96,8 +114,8 @@ function App() {
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   )
 }
 
