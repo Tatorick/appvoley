@@ -20,6 +20,7 @@ import PortalLogin from './pages/Portal/PortalLogin'
 import PortalDashboard from './pages/Portal/PortalDashboard'
 import AdminLayout from './layouts/AdminLayout'
 import AdminDashboard from './pages/Admin/AdminDashboard'
+import ClubInspector from './pages/Admin/ClubInspector'
 import { Loader2 } from 'lucide-react'
 
 // Protected Route Component
@@ -90,6 +91,7 @@ function App() {
               </ProtectedRoute>
           }>
               <Route index element={<AdminDashboard />} />
+              <Route path="club/:id" element={<ClubInspector />} />
           </Route>
 
           {/* Protected Routes (Dashboard) */}

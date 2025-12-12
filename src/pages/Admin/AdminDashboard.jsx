@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { Loader2, CheckCircle, XCircle, Search, Building2, User, MoreHorizontal, ShieldCheck } from 'lucide-react'
 
@@ -130,14 +131,22 @@ export default function AdminDashboard() {
                                         {club.player_count}
                                     </td>
                                     <td className="p-4 text-right">
-                                        {club.status === 'pendiente' && (
-                                            <button 
-                                                onClick={() => handleApprove(club.id)}
-                                                className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-green-900/20 transition-all"
+                                        <div className="flex justify-end gap-2">
+                                            {club.status === 'pendiente' && (
+                                                <button 
+                                                    onClick={() => handleApprove(club.id)}
+                                                    className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition-all"
+                                                >
+                                                    Aprobar
+                                                </button>
+                                            )}
+                                            <Link 
+                                                to={`/admin/club/${club.id}`}
+                                                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-all"
                                             >
-                                                Aprobar
-                                            </button>
-                                        )}
+                                                Gestionar
+                                            </Link>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
