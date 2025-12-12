@@ -15,7 +15,7 @@ export default function AdminDashboard() {
         setClubs(data || [])
     } catch (err) {
         console.error("Error fetching admin data:", err)
-        alert("Error cargando datos. Asegúrate de ser Super Admin.")
+        alert("Error cargando datos: " + (err.message || err.error_description || "Error desconocido"))
     } finally {
         setLoading(false)
     }
