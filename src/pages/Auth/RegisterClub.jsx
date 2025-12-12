@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { 
-  User, Mail, Lock, Building2, MapPin, 
+  User, Mail, Lock, Building2, MapPin, Globe,
   Phone, FileText, ArrowRight, Loader2, CheckCircle2, AlertCircle 
 } from 'lucide-react'
 import { validatePhone, validateId } from '../../utils/validations'
