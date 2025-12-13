@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, clubId }) {
     const [loading, setLoading] = useState(false)
     const [teams, setTeams] = useState([])
-    
+
     // Form State
     const [formData, setFormData] = useState({
         team_id: '',
@@ -27,7 +27,7 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
                     .from('teams')
                     .select('id, nombre, category:categories(nombre)')
                     .eq('club_id', clubId)
-                
+
                 if (data && data.length > 0) {
                     setTeams(data)
                     // Auto-select first team
@@ -55,14 +55,14 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
 
         try {
             // Determine result logic automatically if needed, but we rely on manual input
-            
+
             const { error } = await supabase
                 .from('matches')
                 .insert({
                     club_id: clubId,
                     team_id: formData.team_id,
                     opponent_name: formData.opponent_name || 'Rival',
-                    tournament_name: formData.tournament_name,
+                    notes: formData.tournament_name, // Mapped to notes as tournament_name column doesn't exist
                     date: formData.date,
                     time: formData.time,
                     type: formData.type,
@@ -78,12 +78,12 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
             onClose()
             // Reset form minimal
             setFormData(prev => ({
-                 ...prev,
-                 opponent_name: '',
-                 tournament_name: '',
-                 score_us: 0, 
-                 score_them: 0,
-                 set_scores: ''
+                ...prev,
+                opponent_name: '',
+                tournament_name: '',
+                score_us: 0,
+                score_them: 0,
+                set_scores: ''
             }))
 
         } catch (error) {
@@ -110,16 +110,16 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    
+
                     {/* Team Selection */}
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Equipo del Club</label>
                         <div className="relative">
-                            <Users className="absolute left-3 top-3 text-slate-400" size={18}/>
-                            <select 
+                            <Users className="absolute left-3 top-3 text-slate-400" size={18} />
+                            <select
                                 required
                                 value={formData.team_id}
-                                onChange={e => setFormData({...formData, team_id: e.target.value})}
+                                onChange={e => setFormData({ ...formData, team_id: e.target.value })}
                                 className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
                             >
                                 {teams.map(team => (
@@ -132,23 +132,23 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                         {/* Date */}
+                        {/* Date */}
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
-                            <input 
+                            <input
                                 type="date"
                                 required
                                 value={formData.date}
-                                onChange={e => setFormData({...formData, date: e.target.value})}
+                                onChange={e => setFormData({ ...formData, date: e.target.value })}
                                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
-                         {/* Type */}
-                         <div>
+                        {/* Type */}
+                        <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo</label>
-                            <select 
+                            <select
                                 value={formData.type}
-                                onChange={e => setFormData({...formData, type: e.target.value})}
+                                onChange={e => setFormData({ ...formData, type: e.target.value })}
                                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20"
                             >
                                 <option value="tournament">Torneo / Copa</option>
@@ -160,16 +160,16 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
 
                     {/* Rival & Tournament */}
                     <div className="grid grid-cols-2 gap-4">
-                         <div>
+                        <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rival</label>
                             <div className="relative">
-                                <Swords className="absolute left-3 top-3 text-slate-400" size={18}/>
-                                <input 
+                                <Swords className="absolute left-3 top-3 text-slate-400" size={18} />
+                                <input
                                     type="text"
                                     placeholder="Nombre del Rival"
                                     required
                                     value={formData.opponent_name}
-                                    onChange={e => setFormData({...formData, opponent_name: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, opponent_name: e.target.value })}
                                     className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
@@ -177,12 +177,12 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre Torneo</label>
                             <div className="relative">
-                                <Trophy className="absolute left-3 top-3 text-slate-400" size={18}/>
-                                <input 
+                                <Trophy className="absolute left-3 top-3 text-slate-400" size={18} />
+                                <input
                                     type="text"
                                     placeholder="Ej. Copa Verano"
                                     value={formData.tournament_name}
-                                    onChange={e => setFormData({...formData, tournament_name: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, tournament_name: e.target.value })}
                                     className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
@@ -197,24 +197,24 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
                         <div className="flex items-center gap-4 justify-center">
                             <div className="text-center">
                                 <label className="block text-xs font-bold text-slate-400 mb-1">Nosotros</label>
-                                <input 
+                                <input
                                     type="number"
                                     min="0"
                                     max="5"
                                     value={formData.score_us}
-                                    onChange={e => setFormData({...formData, score_us: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, score_us: e.target.value })}
                                     className="w-20 p-3 text-center text-2xl font-bold bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-primary"
                                 />
                             </div>
                             <span className="text-2xl font-bold text-slate-300">-</span>
                             <div className="text-center">
                                 <label className="block text-xs font-bold text-slate-400 mb-1">Ellos</label>
-                                <input 
+                                <input
                                     type="number"
                                     min="0"
                                     max="5"
                                     value={formData.score_them}
-                                    onChange={e => setFormData({...formData, score_them: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, score_them: e.target.value })}
                                     className="w-20 p-3 text-center text-2xl font-bold bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500/20 text-red-500"
                                 />
                             </div>
@@ -222,11 +222,11 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
 
                         <div className="mt-4">
                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Detalle por Sets (Opcional)</label>
-                            <input 
+                            <input
                                 type="text"
                                 placeholder="Ej: 25-20, 24-26, 15-10"
                                 value={formData.set_scores}
-                                onChange={e => setFormData({...formData, set_scores: e.target.value})}
+                                onChange={e => setFormData({ ...formData, set_scores: e.target.value })}
                                 className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-primary"
                             />
                         </div>
@@ -234,19 +234,19 @@ export default function RegisterMatchResultModal({ isOpen, onClose, onSuccess, c
 
                     {/* Footer */}
                     <div className="flex gap-3 pt-2">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={onClose}
                             className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors"
                         >
                             Cancelar
                         </button>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             disabled={loading}
                             className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-primary/25 flex items-center justify-center gap-2"
                         >
-                            {loading ? 'Guardando...' : <><Save size={20}/> Guardar Resultado</>}
+                            {loading ? 'Guardando...' : <><Save size={20} /> Guardar Resultado</>}
                         </button>
                     </div>
 
