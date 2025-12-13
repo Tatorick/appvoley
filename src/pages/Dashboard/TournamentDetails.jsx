@@ -36,6 +36,90 @@ export default function TournamentDetails() {
             const { data: tData, error: tError } = await supabase
                 .from('tournaments')
                 .select('*')
+                .eq('id', id)
+                .single()
+
+            if (tError) throw tError
+            setTournament(tData)
+
+            // 2. Fetch Roster
+            const { data: rData, error: rError } = await supabase
+                .from('tournament_roster')
+                .select('*, players(id, first_name, last_name, position)')
+                .eq('tournament_id', id)
+
+            if (rError) throw rError
+
+            // 2b. Fetch Team Assignments for these players
+            const playerIds = rData?.map(r => r.player_id).filter(Boolean) || []
+            let playerTeamsMap = {}
+
+            if (playerIds.length > 0) {
+                const { data: assignments } = await supabase
+                    .from('team_assignments')
+                    .select('player_id, teams(nombre)')
+                    .in('player_id', playerIds)
+
+                assignments?.forEach(a => {
+                    if (!playerTeamsMap[a.player_id]) {
+                        playerTeamsMap[a.player_id] = a.teams?.nombre
+                    }
+                })
+            }
+
+            // Map teams back to roster
+            const rosterWithTeams = rData?.map(r => ({
+                ...r,
+                players: {
+                    ...r.players,
+                    teams: { nombre: playerTeamsMap[r.player_id] || 'Sin Equipo' }
+                }
+            })) || []
+
+            setRoster(rosterWithTeams)
+
+            // 3. Fetch Payments
+            const { data: pData, error: pError } = await supabase
+                .from('tournament_payments')
+                .select('*, players(first_name, last_name)')
+                .eq('tournament_id', id)
+                .order('date', { ascending: false })
+
+            if (pError) throw pError
+            setPayments(pData || [])
+
+            // 4. Fetch All Players (for adding to roster)
+            const { data: apData } = await supabase
+                .from('players')
+                .select('id, first_name, last_name, position')
+                .eq('club_id', tData.club_id)
+                .order('first_name')
+
+            // Fetch assignments for all players
+            const allPlayerIds = apData?.map(p => p.id) || []
+            const allPlayerTeamsMap = {}
+
+            if (allPlayerIds.length > 0) {
+                const { data: allAssignments } = await supabase
+                    .from('team_assignments')
+                    .select('player_id, teams(nombre)')
+                    .in('player_id', allPlayerIds)
+
+                allAssignments?.forEach(a => {
+                    if (!allPlayerTeamsMap[a.player_id]) {
+                        allPlayerTeamsMap[a.player_id] = a.teams?.nombre
+                    }
+                })
+            }
+
+            const allPlayersWithTeams = apData?.map(p => ({
+                ...p,
+                teams: { nombre: allPlayerTeamsMap[p.id] || 'Sin Equipo' }
+            })) || []
+
+            setAllPlayers(allPlayersWithTeams)
+
+        } catch (err) {
             console.error(err)
             // navigate('/app/tournaments') // Don't redirect on error, let user see it
         } finally {
