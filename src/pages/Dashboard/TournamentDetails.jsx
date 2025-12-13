@@ -117,6 +117,57 @@ export default function TournamentDetails() {
     }
 
     // --- Roster Logic ---
+    const [selectedTeamFilter, setSelectedTeamFilter] = useState('all')
+    const [selectedPlayerIds, setSelectedPlayerIds] = useState([])
+
+    const availablePlayers = allPlayers.filter(p => !roster.some(r => r.player_id === p.id))
+    const filteredAvailablePlayers = selectedTeamFilter === 'all'
+        ? availablePlayers
+        : availablePlayers.filter(p => p.teams?.nombre === selectedTeamFilter)
+
+    const togglePlayerSelection = (playerId) => {
+        setSelectedPlayerIds(prev =>
+            prev.includes(playerId)
+                ? prev.filter(id => id !== playerId)
+                : [...prev, playerId]
+        )
+    }
+
+    const handleSelectAll = () => {
+        if (selectedPlayerIds.length === filteredAvailablePlayers.length) {
+            setSelectedPlayerIds([])
+        } else {
+            setSelectedPlayerIds(filteredAvailablePlayers.map(p => p.id))
+        }
+    }
+
+    const handleBulkAdd = async () => {
+        if (selectedPlayerIds.length === 0) return
+        setLoading(true)
+        try {
+            const records = selectedPlayerIds.map(pid => ({
+                tournament_id: id,
+                player_id: pid,
+                status: 'pending'
+            }))
+
+            const { error } = await supabase
+                .from('tournament_roster')
+                .insert(records)
+
+            if (error) throw error
+
+            await fetchTournamentDetails()
+            setIsAddingPlayer(false)
+            setSelectedPlayerIds([])
+        } catch (err) {
+            console.error(err)
+            alert("Error al agregar jugadores")
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleAddToRoster = async (playerId) => {
         try {
             const { error } = await supabase
@@ -162,8 +213,6 @@ export default function TournamentDetails() {
     // --- Render Helpers ---
     if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-slate-300" /></div>
     if (!tournament) return null
-
-    const availablePlayers = allPlayers.filter(p => !roster.some(r => r.player_id === p.id))
 
     // Financial Summary
     const totalExpected = roster.length * (tournament.cost_per_player || 0)
@@ -236,21 +285,65 @@ export default function TournamentDetails() {
                         {/* Add Player Area */}
                         {isAddingPlayer && (
                             <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 animate-in zoom-in-95">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase">Seleccionar Jugador</h4>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase">Seleccionar Jugadores</h4>
                                     <button onClick={() => setIsAddingPlayer(false)}><XCircle size={16} className="text-slate-400 hover:text-slate-600" /></button>
                                 </div>
+
+                                {/* Filters & Actions */}
+                                <div className="flex flex-wrap gap-3 mb-4">
+                                    <select
+                                        className="text-sm border-slate-200 rounded-lg px-3 py-2 bg-white"
+                                        onChange={(e) => setSelectedTeamFilter(e.target.value)}
+                                    >
+                                        <option value="all">Todos los Equipos</option>
+                                        {[...new Set(allPlayers.map(p => p.teams?.nombre))].filter(Boolean).sort().map(teamName => (
+                                            <option key={teamName} value={teamName}>{teamName}</option>
+                                        ))}
+                                    </select>
+
+                                    <button
+                                        onClick={handleSelectAll}
+                                        className="text-sm text-slate-600 font-medium hover:text-primary px-2"
+                                    >
+                                        {selectedPlayerIds.length === filteredAvailablePlayers.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                                    </button>
+
+                                    <button
+                                        onClick={handleBulkAdd}
+                                        disabled={selectedPlayerIds.length === 0}
+                                        className="ml-auto bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
+                                    >
+                                        Agregar ({selectedPlayerIds.length})
+                                    </button>
+                                </div>
+
+                                {/* Player Grid */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-                                    {availablePlayers.map(p => (
-                                        <button
-                                            key={p.id}
-                                            onClick={() => handleAddToRoster(p.id)}
-                                            className="text-left p-2 bg-white border border-slate-200 rounded-lg hover:border-primary hover:shadow-sm transition-all text-sm"
-                                        >
-                                            <p className="font-bold text-slate-700">{p.first_name} {p.last_name}</p>
-                                            <p className="text-xs text-slate-400">{p.position} • {p.teams?.nombre || 'Sin Equipo'}</p>
-                                        </button>
-                                    ))}
+                                    {filteredAvailablePlayers.length === 0 ? (
+                                        <p className="col-span-full text-center text-slate-400 text-sm py-4">No hay jugadores disponibles con este filtro.</p>
+                                    ) : (
+                                        filteredAvailablePlayers.map(p => (
+                                            <label
+                                                key={p.id}
+                                                className={`flex items-center gap-3 p-2 border rounded-lg cursor-pointer transition-all ${selectedPlayerIds.includes(p.id)
+                                                    ? 'bg-primary/5 border-primary shadow-sm'
+                                                    : 'bg-white border-slate-200 hover:border-slate-300'
+                                                    }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+                                                    checked={selectedPlayerIds.includes(p.id)}
+                                                    onChange={() => togglePlayerSelection(p.id)}
+                                                />
+                                                <div>
+                                                    <p className="font-bold text-slate-700 text-sm">{p.first_name} {p.last_name}</p>
+                                                    <p className="text-xs text-slate-400">{p.position} • {p.teams?.nombre || 'Sin Equipo'}</p>
+                                                </div>
+                                            </label>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         )}
