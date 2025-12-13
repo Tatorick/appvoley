@@ -20,6 +20,8 @@ $$;
 -- 2. Drop the problematic recursive policies from the previous migration
 DROP POLICY IF EXISTS "Club admins can view all members" ON club_members;
 DROP POLICY IF EXISTS "Members can view their own membership" ON club_members;
+DROP POLICY IF EXISTS "View own membership" ON club_members;
+DROP POLICY IF EXISTS "Admins and Owners view all members" ON club_members;
 
 -- 3. Create new non-recursive policies for club_members
 
