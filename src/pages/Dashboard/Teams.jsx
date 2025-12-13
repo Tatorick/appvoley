@@ -24,31 +24,6 @@ export default function Teams() {
                 .select(`
                 *,
                 categories (nombre)
-            `)
-                .eq('club_id', club.id)
-                .order('created_at', { ascending: false })
-
-            if (teamsError) throw teamsError
-
-            // 2. Fetch Player Counts (separate query to avoid relationship errors)
-            const { data: playersData, error: playersError } = await supabase
-                .from('players')
-                .select('team_id')
-                .eq('club_id', club.id)
-
-            if (playersError) throw playersError
-
-            // Calculate counts
-            const countsByTeam = {}
-            playersData?.forEach(p => {
-                if (p.team_id) {
-                    countsByTeam[p.team_id] = (countsByTeam[p.team_id] || 0) + 1
-                }
-            })
-
-            // Merge counts
-            const teamsWithCount = teamsData?.map(team => ({
-                ...team,
                 player_count: countsByTeam[team.id] || 0
             })) || []
 
@@ -171,10 +146,12 @@ export default function Teams() {
                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
                                     <Shield size={12} /> {team.categories?.nombre || 'Sin Categoría'}
                                 </span>
-                                <span className={`px-2.5 py-1 text-xs font-bold rounded-md uppercase tracking-wide 
-                            ${team.genero === 'Femenino' ? 'bg-pink-100 text-pink-600' :
-                                        team.genero === 'Masculino' ? 'bg-blue-100 text-blue-600' :
-                                            'bg-purple-100 text-purple-600'}`
+                                <span className={`px - 2.5 py - 1 text - xs font - bold rounded - md uppercase tracking - wide 
+                            ${
+                    team.genero === 'Femenino' ? 'bg-pink-100 text-pink-600' :
+                        team.genero === 'Masculino' ? 'bg-blue-100 text-blue-600' :
+                            'bg-purple-100 text-purple-600'
+                }`
                                 }>
                                     {team.genero || 'Mixto'}
                                 </span>
