@@ -27,13 +27,20 @@ export default function Teams() {
                 .from('teams')
                 .select(`
                 *,
-                categories (nombre)
+                categories (nombre),
+                players (count)
             `)
                 .eq('club_id', club.id)
                 .order('created_at', { ascending: false })
 
             if (error) throw error
-            setTeams(data || [])
+            // Transform data to flatten player count
+            const teamsWithCount = data?.map(team => ({
+                ...team,
+                player_count: team.players?.[0]?.count || 0
+            })) || []
+
+            setTeams(teamsWithCount)
         } catch (err) {
             console.error('Error fetching teams:', err)
         } finally {
@@ -164,7 +171,7 @@ export default function Teams() {
                             <div className="pt-4 border-t border-slate-50 flex items-center gap-4 text-sm text-slate-500">
                                 <div className="flex items-center gap-1.5">
                                     <Users size={16} />
-                                    <span>0 Jugadores</span>
+                                    <span>{team.player_count} Jugadores</span>
                                 </div>
                             </div>
                         </div>
