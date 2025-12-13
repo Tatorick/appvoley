@@ -15,6 +15,8 @@ import Agenda from './pages/Dashboard/Agenda'
 import Attendance from './pages/Dashboard/Attendance'
 import Statistics from './pages/Dashboard/Statistics'
 import Payments from './pages/Dashboard/Payments'
+import Tournaments from './pages/Dashboard/Tournaments'
+import TournamentDetails from './pages/Dashboard/TournamentDetails'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import PortalLogin from './pages/Portal/PortalLogin'
 import PortalDashboard from './pages/Portal/PortalDashboard'
@@ -26,8 +28,8 @@ import { Loader2 } from 'lucide-react'
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth()
-    
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40}/></div>
+
+    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
     if (!user) return <Navigate to="/auth" replace />
 
     return children
@@ -36,8 +38,8 @@ const ProtectedRoute = ({ children }) => {
 // Auth Route Wrapper (Redirects if already logged in)
 const AuthRoute = ({ children }) => {
     const { user, loading } = useAuth()
-    
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40}/></div>
+
+    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
     if (user) return <Navigate to="/app" replace />
 
     return children
@@ -46,7 +48,7 @@ const AuthRoute = ({ children }) => {
 function AuthHandler() {
     const [searchParams] = useSearchParams()
     const mode = searchParams.get('mode')
-    
+
     if (mode === 'register') {
         return <RegisterClub />
     }
@@ -56,69 +58,71 @@ function AuthHandler() {
 
 
 function App() {
-  return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          {/* Public Website */}
-          <Route path="/" element={<Landing />} />
-          
-          {/* Public Player Portal */}
-          <Route path="/portal" element={<PortalLogin />} />
-          <Route path="/portal/dashboard" element={<PortalDashboard />} />
+    return (
+        <Router>
+            <AuthProvider>
+                <Routes>
+                    {/* Public Website */}
+                    <Route path="/" element={<Landing />} />
 
-          {/* Auth Routes */}
-            <Route path="/auth" element={
-                <AuthRoute>
-                    <AuthHandler />
-                </AuthRoute>
-            } />
+                    {/* Public Player Portal */}
+                    <Route path="/portal" element={<PortalLogin />} />
+                    <Route path="/portal/dashboard" element={<PortalDashboard />} />
 
-            <Route path="/register-club" element={
-                <AuthRoute>
-                    <RegisterClub />
-                </AuthRoute>
-            } />
+                    {/* Auth Routes */}
+                    <Route path="/auth" element={
+                        <AuthRoute>
+                            <AuthHandler />
+                        </AuthRoute>
+                    } />
 
-            {/* New /join route */}
-            {/* New /join route - Accessible by both guest and auth */}
-            <Route path="/join" element={<JoinClub />} />
-            
-            {/* Super Admin Routes */}
-          <Route path="/admin" element={
-              <ProtectedRoute>
-                  <AdminLayout />
-              </ProtectedRoute>
-          }>
-              <Route index element={<AdminDashboard />} />
-              <Route path="club/:id" element={<ClubInspector />} />
-          </Route>
+                    <Route path="/register-club" element={
+                        <AuthRoute>
+                            <RegisterClub />
+                        </AuthRoute>
+                    } />
 
-          {/* Protected Routes (Dashboard) */}
-            <Route path="/app" element={
-                <ProtectedRoute>
-                    <DashboardLayout />
-                </ProtectedRoute>
-            }>
-                <Route index element={<ClubHome />} />
-                <Route path="teams" element={<Teams />} />
-                <Route path="players" element={<Players />} />
-                <Route path="players/:id" element={<PlayerDetails />} />
-                <Route path="payments" element={<Payments />} />
-                <Route path="matchmaking" element={<Matchmaking />} />
-                <Route path="agenda" element={<Agenda />} />
-                <Route path="attendance" element={<Attendance />} />
-                <Route path="statistics" element={<Statistics />} />
-                <Route path="settings" element={<Settings />} />
-                {/* Add other routes here */}
-            </Route>
-            
-            {/* Catch all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
-    </Router>
-  )
+                    {/* New /join route */}
+                    {/* New /join route - Accessible by both guest and auth */}
+                    <Route path="/join" element={<JoinClub />} />
+
+                    {/* Super Admin Routes */}
+                    <Route path="/admin" element={
+                        <ProtectedRoute>
+                            <AdminLayout />
+                        </ProtectedRoute>
+                    }>
+                        <Route index element={<AdminDashboard />} />
+                        <Route path="club/:id" element={<ClubInspector />} />
+                    </Route>
+
+                    {/* Protected Routes (Dashboard) */}
+                    <Route path="/app" element={
+                        <ProtectedRoute>
+                            <DashboardLayout />
+                        </ProtectedRoute>
+                    }>
+                        <Route index element={<ClubHome />} />
+                        <Route path="teams" element={<Teams />} />
+                        <Route path="players" element={<Players />} />
+                        <Route path="players/:id" element={<PlayerDetails />} />
+                        <Route path="payments" element={<Payments />} />
+                        <Route path="matchmaking" element={<Matchmaking />} />
+                        <Route path="agenda" element={<Agenda />} />
+                        <Route path="attendance" element={<Attendance />} />
+                        <Route path="tournaments" element={<Tournaments />} />
+                        <Route path="tournaments/:id" element={<TournamentDetails />} />
+                        <Route path="statistics" element={<Statistics />} />
+                        <Route path="settings" element={<Settings />} />
+                        {/* Add other routes here */}
+                    </Route>
+
+                    {/* Catch all */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </AuthProvider>
+        </Router>
+    )
 }
 
 export default App
