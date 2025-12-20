@@ -142,18 +142,6 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                 throw new Error(`Jugador creado, pero hubo errores al asignar equipos:\n${errors.join('\n')}`)
             }
 
-            onPlayerAdded()
-            onClose()
-        } catch (err) {
-            if (err.code === 'P0001') {
-                setError(err.message)
-            } else if (err.code === '23505') {
-                setError("Este jugador ya está registrado en el sistema (Cédula duplicada).\nNo puede pertenecer a dos clubes simultáneamente.")
-            } else {
-                setError(err.message || "Error al crear jugador")
-            }
-        } finally {
-            setLoading(false)
         }
     }
 
