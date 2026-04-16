@@ -173,8 +173,9 @@ function PaymentsTab({ player }) {
         // Target "YYYY-MM"
         const targetMonthStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
         
-        // Find payment
+        // Find payment — must be a monthly fee (Cuotas), not matricula or uniform
         const payment = payments.find(p => {
+            if (p.category !== 'Cuotas') return false  // Only count monthly fees
             if (p.payment_month) {
                 return p.payment_month.startsWith(targetMonthStr)
             } else {

@@ -20,7 +20,7 @@ export function useClubData() {
           .from('clubs')
           .select('*')
           .eq('created_by', user.id)
-          .single()
+          .maybeSingle()
 
         if (ownedClub) {
           setClub(ownedClub)
@@ -31,7 +31,7 @@ export function useClubData() {
             .from('club_members')
             .select('*, clubs(*)') // Join clubs to get club details
             .eq('profile_id', user.id)
-            .single()
+            .maybeSingle()
 
           if (memberData && memberData.clubs) {
             setClub(memberData.clubs)

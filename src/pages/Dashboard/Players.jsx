@@ -70,9 +70,15 @@ export default function Players() {
   // Helpers
   const calculateAge = (dob) => {
     if (!dob) return '-'
-    const diff = Date.now() - new Date(dob).getTime()
-    const ageDate = new Date(diff)
-    return Math.abs(ageDate.getUTCFullYear() - 1970)
+    // Append T00:00:00 to force local-time parsing (avoids UTC midnight offset shifting the date)
+    const birthDate = new Date(dob + 'T00:00:00')
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
   }
 
   const handleDeletePlayer = async (playerId) => {

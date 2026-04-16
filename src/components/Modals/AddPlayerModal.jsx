@@ -50,10 +50,10 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
 
     async function fetchTeams() {
         try {
-            let { data: clubData } = await supabase.from('clubs').select('id').eq('created_by', user.id).single()
+            let { data: clubData } = await supabase.from('clubs').select('id').eq('created_by', user.id).maybeSingle()
 
             if (!clubData) {
-                const { data: memberData } = await supabase.from('club_members').select('club_id').eq('profile_id', user.id).single()
+                const { data: memberData } = await supabase.from('club_members').select('club_id').eq('profile_id', user.id).maybeSingle()
                 if (memberData) clubData = { id: memberData.club_id }
             }
 
@@ -79,18 +79,21 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
         try {
             const { data, error } = await supabase
                 .from('players')
-                .select('id, club_id, clubs(nombre)')
+                .select('id, club_id')
                 .eq('dni', dniToCheck)
                 .maybeSingle()
 
             if (error) throw error
 
             if (data) {
-                // Player exists
-                setError(`El jugador con cédula ${dniToCheck} ya está registrado en el club "${data.clubs?.nombre || 'Desconocido'}".`)
+                if (data.club_id === clubId) {
+                    setError(`Ya existe un jugador con cédula ${dniToCheck} en este club.`)
+                } else {
+                    setError(`El jugador con cédula ${dniToCheck} ya está registrado en otro club.`)
+                }
             } else {
-                // Clear error if it was a duplicate error
-                if (error && error.includes('ya está registrado')) setError(null)
+                // DNI is available — clear any previous DNI-related error
+                setError(null)
             }
         } catch (err) {
             console.error('Error checking DNI:', err)
@@ -116,9 +119,26 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
         try {
             if (!clubId) throw new Error("No se pudo identificar el club.")
 
-            // Validate ID
+            // Validate ID format
             if (formData.dni && !validateId(formData.dni)) {
                 throw new Error("La Cédula de Identidad ingresada no es válida (Ecuador).")
+            }
+
+            // PRE-CHECK: Verify DNI uniqueness before inserting to avoid orphan records
+            if (formData.dni) {
+                const { data: existing } = await supabase
+                    .from('players')
+                    .select('id, club_id')
+                    .eq('dni', formData.dni)
+                    .maybeSingle()
+
+                if (existing) {
+                    if (existing.club_id === clubId) {
+                        throw new Error(`Ya existe un jugador con cédula ${formData.dni} en este club.`)
+                    } else {
+                        throw new Error(`El jugador con cédula ${formData.dni} ya está registrado en otro club. Si deseas transferirlo, primero debe ser dado de baja.`)
+                    }
+                }
             }
 
             // 1. Insert Player (Core Data)
@@ -127,7 +147,7 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                 .insert({
                     first_name: formData.first_name,
                     last_name: formData.last_name,
-                    dni: formData.dni,
+                    dni: formData.dni || null,
                     dob: formData.dob,
                     gender: formData.gender,
                     height: formData.height ? parseInt(formData.height) : null,
@@ -138,7 +158,13 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                 .select()
                 .single()
 
-            if (insertError) throw insertError
+            if (insertError) {
+                // Fallback: catch any DB-level duplicate key violation
+                if (insertError.code === '23505' || insertError.message?.includes('players_dni_key') || insertError.message?.includes('duplicate key')) {
+                    throw new Error(`Ya existe un jugador con esa cédula en el sistema.`)
+                }
+                throw insertError
+            }
 
             const newPlayerId = playerData.id
 
@@ -162,21 +188,20 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
             }
 
             if (errors.length > 0) {
-                // Partial Success: Player created, but some assignments failed
-                // We format the error to show broadly
-                throw new Error(`Jugador creado, pero hubo errores al asignar equipos:\n${errors.join('\n')}`)
+                // Note: Player was created successfully, but some team assignments failed.
+                // We still call onPlayerAdded so the player appears in the list.
+                onPlayerAdded()
+                onClose()
+                // Show error after close (can be converted to toast in UI)
+                console.warn('Asignaciones parciales fallaron:', errors.join(', '))
+                return
             }
+
             onPlayerAdded()
             onClose()
         } catch (err) {
             console.error("Error creating player:", err)
-            if (err.code === 'P0001') {
-                setError(err.message)
-            } else if (err.code === '23505' || err.status === 409 || err.message?.includes('players_dni_key') || err.message?.includes('duplicate key')) {
-                setError("El jugador ya pertenece a otro club.")
-            } else {
-                setError(err.message || "Error al crear jugador")
-            }
+            setError(err.message || "Error al crear jugador")
         } finally {
             setLoading(false)
         }

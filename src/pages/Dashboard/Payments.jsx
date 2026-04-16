@@ -363,7 +363,7 @@ export default function Payments() {
                             onChange={e => setSelectedYear(Number(e.target.value))}
                             className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none"
                         >
-                            {[2023, 2024, 2025, 2026].map(y => (
+                            {Array.from({ length: new Date().getFullYear() - 2023 + 2 }, (_, i) => 2023 + i).map(y => (
                                 <option key={y} value={y}>{y}</option>
                             ))}
                         </select>
