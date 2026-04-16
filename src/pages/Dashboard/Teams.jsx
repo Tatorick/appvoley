@@ -89,6 +89,7 @@ export default function Teams() {
     }
 
     if (clubLoading) return <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" size={32} /></div>
+    if (!club) return <div className="p-10 text-center text-slate-400">No se encontró un club asociado a tu cuenta.</div>
 
     return (
         <div className="space-y-6">

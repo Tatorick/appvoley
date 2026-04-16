@@ -37,6 +37,7 @@ export default function Tournaments() {
     }, [club, fetchTournaments])
 
     if (clubLoading) return <div className="p-10 text-center">Cargando...</div>
+    if (!club) return <div className="p-10 text-center text-slate-400">No se encontró un club asociado a tu cuenta.</div>
 
     const activeTournaments = tournaments.filter(t => t.status === 'planned' || t.status === 'confirmed')
     const pastTournaments = tournaments.filter(t => t.status === 'completed' || t.status === 'canceled')

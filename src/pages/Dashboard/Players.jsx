@@ -101,6 +101,7 @@ export default function Players() {
   }
 
   if (clubLoading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
+  if (!club) return <div className="p-10 text-center text-slate-400">No se encontró un club asociado a tu cuenta.</div>
 
   return (
     <div className="space-y-6">
