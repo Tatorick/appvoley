@@ -23,7 +23,7 @@ export default function RegisterClub() {
     // Club
     clubName: '',
     city: '',
-    country: '', // Manual input
+    country: 'Ecuador', // Pre-filled — editable if needed
     phone: '',
     rucDni: ''
   })
@@ -255,14 +255,15 @@ export default function RegisterClub() {
                         <div>
                             <label className="text-sm font-medium text-slate-700 block mb-1">País</label>
                             <div className="relative">
-                                <Globe className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                                <span className="absolute left-3 top-3 text-lg select-none pointer-events-none">🇪🇨</span>
                                 <input 
                                     type="text" name="country" required
                                     value={formData.country} onChange={handleChange}
                                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                                    placeholder="Perú"
+                                    placeholder="Ecuador"
                                 />
                             </div>
+                            <p className="text-xs text-slate-400 mt-1">Pre-completado para Ecuador. Puedes cambiarlo.</p>
                         </div>
                         <div>
                             <label className="text-sm font-medium text-slate-700 block mb-1">Ciudad</label>
