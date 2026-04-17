@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { X, Loader2, Save, Plus } from 'lucide-react'
+import { X, Loader2, Save, Plus, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 export default function CreateTeamModal({ isOpen, onClose, onTeamCreated, teamToEdit = null }) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
   const [categories, setCategories] = useState([])
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -20,6 +21,7 @@ export default function CreateTeamModal({ isOpen, onClose, onTeamCreated, teamTo
   useEffect(() => {
     if (isOpen) {
        fetchCategories()
+       setError(null)
        if (teamToEdit) {
            setFormData({
                name: teamToEdit.nombre,
@@ -60,7 +62,11 @@ export default function CreateTeamModal({ isOpen, onClose, onTeamCreated, teamTo
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
     try {
+        const cleanName = formData.name.trim()
+        if (cleanName.length < 3) throw new Error('El nombre del equipo debe tener al menos 3 caracteres.')
+
         // Get Club ID
         const { data: clubData, error: clubError } = await supabase.from('clubs').select('id').eq('created_by', user.id).single()
         if (clubError) throw new Error('No se encontró el club')
@@ -69,10 +75,11 @@ export default function CreateTeamModal({ isOpen, onClose, onTeamCreated, teamTo
 
         // Handle New Category Creation
         if (showNewCategoryInput) {
-            if (!newCategoryName.trim()) throw new Error('Escribe el nombre de la nueva categoría')
+            const cleanNewCategory = newCategoryName.trim()
+            if (cleanNewCategory.length < 2) throw new Error('El nombre de la categoría debe tener al menos 2 caracteres.')
             
             const { data: newCat, error: catError } = await supabase.from('categories').insert({
-                nombre: newCategoryName,
+                nombre: cleanNewCategory,
                 club_id: clubData.id,
                 // Default ages, can be edited later? Or ask? For now specific defaults.
                 edad_min: 0, 
@@ -86,7 +93,7 @@ export default function CreateTeamModal({ isOpen, onClose, onTeamCreated, teamTo
         if (teamToEdit) {
             // Update
             const { error } = await supabase.from('teams').update({
-                nombre: formData.name,
+                nombre: cleanName,
                 category_id: finalCategoryId,
                 genero: formData.gender
             }).eq('id', teamToEdit.id)
@@ -94,7 +101,7 @@ export default function CreateTeamModal({ isOpen, onClose, onTeamCreated, teamTo
         } else {
             // Create
             const { error } = await supabase.from('teams').insert({
-                nombre: formData.name,
+                nombre: cleanName,
                 category_id: finalCategoryId,
                 genero: formData.gender,
                 club_id: clubData.id
@@ -106,7 +113,7 @@ export default function CreateTeamModal({ isOpen, onClose, onTeamCreated, teamTo
         onClose()
     } catch (err) {
         console.error(err)
-        alert('Error: ' + err.message)
+        setError(err.message)
     } finally {
         setLoading(false)
     }
@@ -117,13 +124,19 @@ export default function CreateTeamModal({ isOpen, onClose, onTeamCreated, teamTo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-fade-in-up">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
             <h3 className="text-xl font-bold text-slate-900">{teamToEdit ? 'Editar Equipo' : 'Nuevo Equipo'}</h3>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X size={24} />
             </button>
         </div>
+
+        {error && (
+            <div className="mx-6 mt-4 p-3 bg-red-50 text-red-600 rounded-lg flex items-start gap-2 text-sm animate-fade-in">
+                <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                <span>{error}</span>
+            </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">

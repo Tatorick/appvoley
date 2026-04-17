@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { X, Save, Trophy, MapPin, Calendar, DollarSign } from 'lucide-react'
+import { X, Save, Trophy, MapPin, Calendar, DollarSign, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 export default function CreateTournamentModal({ isOpen, onClose, onSuccess, clubId }) {
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState(null)
     const [formData, setFormData] = useState({
         name: '',
         location: '',
@@ -17,12 +18,21 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
+        setError(null)
         try {
+            const cleanName = formData.name.trim()
+            const cleanLocation = formData.location.trim()
+
+            if (cleanName.length < 3) throw new Error('El nombre del torneo debe tener al menos 3 caracteres.')
+            if (cleanLocation.length < 3) throw new Error('La ubicación debe tener al menos 3 caracteres.')
+
             const { error } = await supabase
                 .from('tournaments')
                 .insert({
                     club_id: clubId,
                     ...formData,
+                    name: cleanName,
+                    location: cleanLocation,
                     cost_per_player: formData.cost_per_player ? parseFloat(formData.cost_per_player) : 0
                 })
 
@@ -40,7 +50,7 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
             })
         } catch (err) {
             console.error(err)
-            alert("Error al crear torneo")
+            setError(err.message || "Error al crear torneo")
         } finally {
             setLoading(false)
         }
@@ -60,6 +70,13 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
                         <X size={24} />
                     </button>
                 </div>
+
+                {error && (
+                    <div className="mx-6 mt-4 p-3 bg-red-50 text-red-600 rounded-lg flex items-start gap-2 text-sm animate-fade-in">
+                        <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                        <span>{error}</span>
+                    </div>
+                )}
 
                 <form id="tournament-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto custom-scrollbar space-y-4">
                     <div>

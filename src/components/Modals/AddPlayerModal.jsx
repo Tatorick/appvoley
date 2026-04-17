@@ -125,6 +125,7 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
             if (!formData.first_name.trim()) throw new Error("El nombre es obligatorio.")
             if (!formData.last_name.trim()) throw new Error("Los apellidos son obligatorios.")
             if (!formData.dni.trim()) throw new Error("La Cédula de Identidad es obligatoria.")
+            if (!formData.dob) throw new Error("La fecha de nacimiento es obligatoria.")
             if (!formData.gender) throw new Error("El género es obligatorio.")
 
             // Validate ID format
@@ -297,10 +298,10 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">
-                                        Fecha de Nacimiento
+                                        Fecha de Nacimiento <span className="text-red-500">*</span>
                                     </label>
                                     <input
-                                        type="date"
+                                        type="date" required
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                                         value={formData.dob}
                                         onChange={e => setFormData({ ...formData, dob: e.target.value })}

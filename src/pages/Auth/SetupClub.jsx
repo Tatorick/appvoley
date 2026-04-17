@@ -76,6 +76,19 @@ export default function SetupClub() {
     e.preventDefault()
     setError(null)
 
+    const cleanClubName = formData.clubName.trim()
+    const cleanCity = formData.city.trim()
+    const cleanCountry = formData.country.trim()
+
+    if (cleanClubName.length < 3) {
+      setError('El nombre del club debe tener al menos 3 caracteres.')
+      return
+    }
+    if (cleanCity.length < 3) {
+      setError('La ciudad debe tener al menos 3 caracteres.')
+      return
+    }
+
     const isPhoneValid = !formData.phone || validatePhone(formData.phone)
     const isIdValid = !formData.rucDni || validateId(formData.rucDni)
 
@@ -106,9 +119,9 @@ export default function SetupClub() {
       const { data: clubData, error: clubError } = await supabase
         .from('clubs')
         .insert({
-          nombre: formData.clubName,
-          ciudad: formData.city,
-          pais: formData.country,
+          nombre: cleanClubName,
+          ciudad: cleanCity,
+          pais: cleanCountry,
           telefono_contacto: formData.phone || null,
           ruc_dni: formData.rucDni || null,
           created_by: userId,

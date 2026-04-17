@@ -67,6 +67,12 @@ export default function RegisterClub() {
 
   const handleNextStep = (e) => {
     e.preventDefault()
+    const cleanFullName = formData.fullName.trim()
+    if (cleanFullName.length < 3) {
+        setError('El nombre completo debe tener al menos 3 caracteres.')
+        return
+    }
+    setError(null)
     setStep(2)
   }
 
@@ -93,9 +99,24 @@ export default function RegisterClub() {
     setLoading(true)
     setError(null)
 
+    const cleanClubName = formData.clubName.trim()
+    const cleanCity = formData.city.trim()
+    const cleanCountry = formData.country.trim()
+
+    if (cleanClubName.length < 3) {
+        setLoading(false)
+        setError('El nombre del club debe tener al menos 3 caracteres.')
+        return
+    }
+    if (cleanCity.length < 3) {
+        setLoading(false)
+        setError('La ciudad debe tener al menos 3 caracteres.')
+        return
+    }
+
     // Final Validation check before submit
-    const isPhoneValid = validatePhone(formData.phone)
-    const isIdValid = validateId(formData.rucDni)
+    const isPhoneValid = !formData.phone || validatePhone(formData.phone)
+    const isIdValid = !formData.rucDni || validateId(formData.rucDni)
 
     if (!isPhoneValid || !isIdValid) {
         setLoading(false)
@@ -162,11 +183,11 @@ export default function RegisterClub() {
       const { data: clubData, error: clubError } = await supabase
         .from('clubs')
         .insert({
-          nombre: formData.clubName,
-          ciudad: formData.city,
-          pais: formData.country,
-          telefono_contacto: formData.phone,
-          ruc_dni: formData.rucDni,
+          nombre: cleanClubName,
+          ciudad: cleanCity,
+          pais: cleanCountry,
+          telefono_contacto: formData.phone || null,
+          ruc_dni: formData.rucDni || null,
           created_by: userId,
           status: 'aprobado' // Auto-approved for beta — enable manual verification later
         })

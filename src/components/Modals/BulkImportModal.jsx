@@ -46,7 +46,7 @@ function validateRow(row, index) {
   const errors = []
   if (!row.first_name?.trim()) errors.push('Nombres requerido')
   if (!row.last_name?.trim()) errors.push('Apellidos requerido')
-  if (!row.dob) errors.push('Fecha de nacimiento inválida')
+  if (!row.dob) errors.push('Fecha de nacimiento obligatoria y válida')
   if (!['Femenino', 'Masculino'].includes(row.gender)) errors.push('Género debe ser Femenino o Masculino')
   if (!row.dni) errors.push('Cédula DNI es obligatoria')
   else if (!validateId(row.dni)) errors.push('Cédula DNI inválida (dígito verificador incorrecto)')
@@ -401,7 +401,7 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
                     </span>
                   ))}
                 </div>
-                <p className="text-xs text-slate-400 mt-2">Los campos Nombres, Apellidos, Fecha Nacimiento, Género y Cédula DNI son <strong>obligatorios</strong>. Si pones un Equipo, puedes indicar su Género y Categoría para crearlo automáticamente.</p>
+                <p className="text-xs text-slate-400 mt-2">Los campos <strong>Nombres, Apellidos, Fecha Nacimiento, Género y Cédula DNI</strong> son <strong>obligatorios</strong>. Asegúrate de incluir cédulas válidas. Si pones un Equipo, puedes indicar su Género y Categoría para crearlo automáticamente.</p>
               </div>
             </div>
           )}
