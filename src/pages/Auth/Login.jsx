@@ -151,11 +151,19 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-8 text-center text-sm text-slate-500">
-            ¿No tienes cuenta?{' '}
-            <Link to="/auth?mode=register" className="text-primary hover:text-primary-dark font-semibold">
-              Registra tu Club
-            </Link>
+          <div className="mt-8 space-y-2 text-center text-sm text-slate-500">
+            <p>
+              ¿No tienes cuenta?{' '}
+              <Link to="/auth?mode=register" className="text-primary hover:text-primary-dark font-semibold">
+                Registra tu Club
+              </Link>
+            </p>
+            <p>
+              ¿Eres entrenador asistente?{' '}
+              <Link to="/assistant-register" className="text-emerald-600 hover:text-emerald-700 font-semibold">
+                Únete con código de club
+              </Link>
+            </p>
           </div>
         </div>
       </div>

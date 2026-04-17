@@ -4,6 +4,7 @@ import Landing from './pages/Landing'
 import Login from './pages/Auth/Login'
 import RegisterClub from './pages/Auth/RegisterClub'
 import JoinClub from './pages/Auth/JoinClub'
+import AssistantRegister from './pages/Auth/AssistantRegister'
 import ForgotPassword from './pages/Auth/ForgotPassword'
 import ResetPassword from './pages/Auth/ResetPassword'
 import SetupClub from './pages/Auth/SetupClub'
@@ -94,6 +95,9 @@ function App() {
 
                     {/* New /join route - Accessible by both guest and auth */}
                     <Route path="/join" element={<JoinClub />} />
+
+                    {/* Assistant Coach registration via club code */}
+                    <Route path="/assistant-register" element={<AssistantRegister />} />
 
                     {/* Super Admin Routes */}
                     <Route path="/admin" element={

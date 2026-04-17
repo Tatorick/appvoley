@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useClubData } from '../hooks/useClubData'
 import {
   LayoutDashboard, Users, User,
   CreditCard, Swords, Settings, LogOut, Menu, X, ChevronRight, Calendar, BarChart3, CalendarCheck, Trophy
@@ -22,8 +23,11 @@ const SidebarItem = ({ icon: Icon, text, to, active }) => (
 
 export default function DashboardLayout() {
   const { user, signOut } = useAuth()
+  const { role } = useClubData()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const isAssistant = role === 'assistant'
 
   const navigation = [
     { icon: LayoutDashboard, text: 'Inicio', to: '/app' },
@@ -32,11 +36,13 @@ export default function DashboardLayout() {
     { icon: Trophy, text: 'Torneos', to: '/app/tournaments' },
     { icon: Users, text: 'Equipos', to: '/app/teams' },
     { icon: User, text: 'Jugadores', to: '/app/players' },
-    { icon: CreditCard, text: 'Pagos', to: '/app/payments' },
+    // Hidden for assistants
+    { icon: CreditCard, text: 'Pagos', to: '/app/payments', restricted: true },
     { icon: BarChart3, text: 'Estadísticas', to: '/app/statistics' },
     { icon: Swords, text: 'Matchmaking', to: '/app/matchmaking' },
-    { icon: Settings, text: 'Configuración', to: '/app/settings' },
-  ]
+    // Hidden for assistants
+    { icon: Settings, text: 'Configuración', to: '/app/settings', restricted: true },
+  ].filter(item => !(isAssistant && item.restricted))
 
   return (
     <div className="min-h-screen bg-slate-50 flex">

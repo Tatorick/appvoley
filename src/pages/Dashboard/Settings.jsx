@@ -10,6 +10,21 @@ export default function Settings() {
 
   if(loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-primary" size={32}/></div>
   if(!club) return <div className="p-10 text-center">No se encontró información del club.</div>
+
+  // Security guard: assistants cannot manage club configuration
+  if (role === 'assistant') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center">
+          <Lock size={32} className="text-amber-400" />
+        </div>
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Acceso Restringido</h2>
+          <p className="text-slate-500 max-w-xs">La configuración del club es exclusiva del entrenador principal. Contacta al administrador si necesitas realizar cambios.</p>
+        </div>
+      </div>
+    )
+  }
   
   // Permissions for Settings
   // Only Admin and Owner can manage club settings

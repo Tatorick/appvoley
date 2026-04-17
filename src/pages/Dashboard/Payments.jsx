@@ -33,6 +33,7 @@ export default function Payments() {
   const [modalCategory, setModalCategory] = useState(null) // New
 
   const canEdit = role === 'owner' || role === 'admin'
+  const isAssistant = role === 'assistant'
 
   const fetchMovements = useCallback(async () => {
     if (!club) return
@@ -259,6 +260,17 @@ export default function Payments() {
   }
 
   return (
+    isAssistant ? (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center">
+          <AlertCircle size={32} className="text-red-400" />
+        </div>
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Acceso Restringido</h2>
+          <p className="text-slate-500 max-w-xs">El módulo financiero es exclusivo del entrenador principal. Contacta al administrador si necesitas acceso.</p>
+        </div>
+      </div>
+    ) : (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
        {/* Header */}
        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -498,7 +510,8 @@ export default function Payments() {
             preselectedMonth={modalTargetMonth}
             preselectedCategory={modalCategory}
        />
-    </div>
+     </div>
+    )
   )
 }
 
