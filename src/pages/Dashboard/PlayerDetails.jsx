@@ -378,7 +378,8 @@ function GeneralTab({ player, assignments, refresh }) {
         dob: player.dob,
         gender: player.gender,
         height: player.height || '',
-        position: player.position || ''
+        position: player.position || '',
+        phone: player.phone || ''
     })
 
     // Calculate Age
@@ -414,7 +415,8 @@ function GeneralTab({ player, assignments, refresh }) {
                     dob: formData.dob,
                     gender: formData.gender,
                     height: formData.height ? parseInt(formData.height) : null,
-                    position: formData.position
+                    position: formData.position,
+                    phone: formData.phone || null
                 })
                 .eq('id', player.id)
 
@@ -556,6 +558,14 @@ function GeneralTab({ player, assignments, refresh }) {
                                         <option value="Universal">Universal</option>
                                     </select>
                                 </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Teléfono / WhatsApp</label>
+                                    <input 
+                                        type="tel" className="w-full p-2 border rounded font-medium text-slate-700"
+                                        placeholder="09XXXXXXXX"
+                                        value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})}
+                                    />
+                                </div>
                             </>
                         ) : (
                             <>
@@ -579,6 +589,17 @@ function GeneralTab({ player, assignments, refresh }) {
                                     <span className="block text-slate-400 text-xs uppercase mb-1">Posición</span>
                                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-bold inline-block">
                                         {player.position}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="block text-slate-400 text-xs uppercase mb-1">Teléfono / WhatsApp</span>
+                                    <span className="font-medium text-slate-700">
+                                        {player.phone ? (
+                                            <a href={`https://wa.me/593${player.phone.replace(/^0/, '')}`} target="_blank" rel="noreferrer"
+                                                className="text-green-600 hover:underline flex items-center gap-1">
+                                                📱 {player.phone}
+                                            </a>
+                                        ) : '-'}
                                     </span>
                                 </div>
                             </>

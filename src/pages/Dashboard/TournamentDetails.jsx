@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Settings, Loader2, Save, Plus, Trash2, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Settings, Loader2, Save, Plus, Trash2, CheckCircle, XCircle, AlertCircle, MessageCircle, UserPlus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
 import TournamentPaymentModal from '../../components/Modals/TournamentPaymentModal'
+import AddPlayerModal from '../../components/Modals/AddPlayerModal'
 
 export default function TournamentDetails() {
     const { id } = useParams()
@@ -17,6 +18,7 @@ export default function TournamentDetails() {
     const [roster, setRoster] = useState([])
     const [allPlayers, setAllPlayers] = useState([])
     const [isAddingPlayer, setIsAddingPlayer] = useState(false)
+    const [isNewPlayerModalOpen, setIsNewPlayerModalOpen] = useState(false)
 
     // Payments Data
     const [payments, setPayments] = useState([])
@@ -42,10 +44,10 @@ export default function TournamentDetails() {
             if (tError) throw tError
             setTournament(tData)
 
-            // 2. Fetch Roster
+            // 2. Fetch Roster (include phone for WhatsApp)
             const { data: rData, error: rError } = await supabase
                 .from('tournament_roster')
-                .select('*, players(id, first_name, last_name, position)')
+                .select('*, players(id, first_name, last_name, position, phone)')
                 .eq('tournament_id', id)
 
             if (rError) throw rError
@@ -91,7 +93,7 @@ export default function TournamentDetails() {
             // 4. Fetch All Players (for adding to roster)
             const { data: apData } = await supabase
                 .from('players')
-                .select('id, first_name, last_name, position')
+                .select('id, first_name, last_name, position, phone')
                 .eq('club_id', tData.club_id)
                 .order('first_name')
 
@@ -127,6 +129,31 @@ export default function TournamentDetails() {
         }
     }
 
+    // WhatsApp link helper
+    const buildWALink = (player) => {
+        if (!player?.phone) return null
+        const phone = player.phone.replace(/\D/g, '')
+        const intl = phone.startsWith('593') ? phone : `593${phone.replace(/^0/, '')}`
+        const text = encodeURIComponent(
+            `Hola ${player.first_name} 👋\n\n` +
+            `Fuiste convocada para el torneo:\n` +
+            `🏆 *${tournament?.name}*\n` +
+            `📅 Del ${new Date(tournament?.start_date).toLocaleDateString('es-EC')} ` +
+            `al ${new Date(tournament?.end_date).toLocaleDateString('es-EC')}\n` +
+            `📍 ${tournament?.location}\n` +
+            `💰 Costo: $${tournament?.cost_per_player} por jugadora\n\n` +
+            `Por favor confirma tu participación respondiendo *SÍ* o *NO* a este mensaje.\n` +
+            `¡Esperamos contar contigo! 🏐`
+        )
+        return `https://wa.me/${intl}?text=${text}`
+    }
+
+    // Auto-add newly created player to tournament roster
+    const handleNewPlayerCreated = async () => {
+        // After refresh, find the newest player not yet in roster
+        await fetchTournamentDetails()
+        setIsNewPlayerModalOpen(false)
+    }
     // --- Roster Logic ---
     const [selectedTeamFilter, setSelectedTeamFilter] = useState('all')
     const [selectedPlayerIds, setSelectedPlayerIds] = useState([])
@@ -280,16 +307,46 @@ export default function TournamentDetails() {
 
                 {/* ROSTER TAB */}
                 {activeTab === 'roster' && (
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h3 className="font-bold text-slate-700">Lista de Jugadores</h3>
+                    <div className="space-y-4">
+
+                        {/* Status counters */}
+                        {roster.length > 0 && (
+                            <div className="flex flex-wrap gap-3">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-100 rounded-xl text-sm">
+                                    <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                    <span className="font-bold text-yellow-700">{roster.filter(r => r.status === 'pending').length}</span>
+                                    <span className="text-yellow-600">pendientes</span>
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-100 rounded-xl text-sm">
+                                    <CheckCircle size={14} className="text-green-500" />
+                                    <span className="font-bold text-green-700">{roster.filter(r => r.status === 'confirmed').length}</span>
+                                    <span className="text-green-600">confirmadas</span>
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-sm">
+                                    <XCircle size={14} className="text-red-400" />
+                                    <span className="font-bold text-red-700">{roster.filter(r => r.status === 'declined').length}</span>
+                                    <span className="text-red-500">no viajan</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                            <h3 className="font-bold text-slate-700">Lista de Convocadas</h3>
                             {canManage && (
-                                <button
-                                    onClick={() => setIsAddingPlayer(true)}
-                                    className="bg-primary text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-dark transition-colors"
-                                >
-                                    <Plus size={16} /> Agregar Jugador
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setIsNewPlayerModalOpen(true)}
+                                        className="border border-primary text-primary px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary/5 transition-colors"
+                                    >
+                                        <UserPlus size={15} /> Nueva Jugadora
+                                    </button>
+                                    <button
+                                        onClick={() => setIsAddingPlayer(true)}
+                                        className="bg-primary text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-dark transition-colors"
+                                    >
+                                        <Plus size={16} /> Agregar Existente
+                                    </button>
+                                </div>
                             )}
                         </div>
 
@@ -364,47 +421,91 @@ export default function TournamentDetails() {
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 text-xs font-bold text-slate-400 uppercase">
                                     <tr>
-                                        <th className="px-6 py-3">Jugador</th>
-                                        <th className="px-6 py-3">Posición</th>
-                                        <th className="px-6 py-3">Estado</th>
-                                        {canManage && <th className="px-6 py-3 text-right">Acciones</th>}
+                                        <th className="px-4 py-3">Jugadora</th>
+                                        <th className="px-4 py-3 hidden sm:table-cell">Posición</th>
+                                        <th className="px-4 py-3">Estado</th>
+                                        {canManage && <th className="px-4 py-3 text-right">Acciones</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {roster.map(r => (
-                                        <tr key={r.id} className="hover:bg-slate-50/50">
-                                            <td className="px-6 py-3">
-                                                <p className="font-bold text-slate-800">{r.players.first_name} {r.players.last_name}</p>
+                                    {roster.map(r => {
+                                        const waLink = buildWALink(r.players)
+                                        return (
+                                        <tr key={r.id} className={`transition-colors ${
+                                            r.status === 'declined' ? 'bg-red-50/50 hover:bg-red-50' :
+                                            r.status === 'confirmed' ? 'hover:bg-green-50/30' :
+                                            'hover:bg-slate-50/50'
+                                        }`}>
+                                            <td className="px-4 py-3">
+                                                <p className="font-bold text-slate-800 text-sm">{r.players.first_name} {r.players.last_name}</p>
                                                 <p className="text-xs text-slate-400">{r.players.teams?.nombre}</p>
                                             </td>
-                                            <td className="px-6 py-3 text-sm text-slate-600">{r.players.position}</td>
-                                            <td className="px-6 py-3">
-                                                <select
-                                                    disabled={!canManage}
-                                                    value={r.status}
-                                                    onChange={(e) => handleUpdateStatus(r.id, e.target.value)}
-                                                    className={`text-xs font-bold px-2 py-1 rounded-full border-none outline-none cursor-pointer ${r.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                                        r.status === 'declined' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                                                        }`}
-                                                >
-                                                    <option value="pending">Pendiente</option>
-                                                    <option value="confirmed">Confirmado</option>
-                                                    <option value="declined">No Viaja</option>
-                                                </select>
+                                            <td className="px-4 py-3 text-sm text-slate-600 hidden sm:table-cell">{r.players.position}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
+                                                    r.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                                                    r.status === 'declined'  ? 'bg-red-100 text-red-700' :
+                                                    'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                    {r.status === 'confirmed' && <CheckCircle size={10} />}
+                                                    {r.status === 'declined'  && <XCircle size={10} />}
+                                                    {r.status === 'pending'   && '⏳'}
+                                                    {r.status === 'confirmed' ? 'Confirmada' : r.status === 'declined' ? 'No Viaja' : 'Pendiente'}
+                                                </span>
                                             </td>
                                             {canManage && (
-                                                <td className="px-6 py-3 text-right">
-                                                    <button onClick={() => handleRemoveFromRoster(r.id)} className="text-slate-300 hover:text-red-500 transition-colors">
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        {/* WhatsApp button (only if phone exists) */}
+                                                        {waLink && (
+                                                            <a
+                                                                href={waLink}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                title="Enviar convocatoria por WhatsApp"
+                                                                className="p-1.5 rounded-lg text-green-500 hover:bg-green-50 transition-colors"
+                                                            >
+                                                                <MessageCircle size={15} />
+                                                            </a>
+                                                        )}
+                                                        {/* Confirm button */}
+                                                        {r.status !== 'confirmed' && (
+                                                            <button
+                                                                onClick={() => handleUpdateStatus(r.id, 'confirmed')}
+                                                                title="Marcar como confirmada"
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                                                            >
+                                                                <CheckCircle size={15} />
+                                                            </button>
+                                                        )}
+                                                        {/* Decline button */}
+                                                        {r.status !== 'declined' && (
+                                                            <button
+                                                                onClick={() => handleUpdateStatus(r.id, 'declined')}
+                                                                title="Marcar como no viaja"
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-colors"
+                                                            >
+                                                                <XCircle size={15} />
+                                                            </button>
+                                                        )}
+                                                        {/* Remove from roster */}
+                                                        <button
+                                                            onClick={() => handleRemoveFromRoster(r.id)}
+                                                            title="Quitar del torneo"
+                                                            className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             )}
                                         </tr>
-                                    ))}
+                                        )
+                                    })}
                                     {roster.length === 0 && (
                                         <tr>
                                             <td colSpan="4" className="px-6 py-8 text-center text-slate-400 italic">
-                                                No hay jugadores convocados aún.
+                                                No hay jugadoras convocadas aún.
                                             </td>
                                         </tr>
                                     )}
@@ -544,6 +645,12 @@ export default function TournamentDetails() {
                 onSuccess={fetchTournamentDetails}
                 tournamentId={id}
                 player={selectedPlayerForPayment}
+            />
+            {/* New Player Modal — creates player AND adds to roster */}
+            <AddPlayerModal
+                isOpen={isNewPlayerModalOpen}
+                onClose={() => setIsNewPlayerModalOpen(false)}
+                onPlayerAdded={handleNewPlayerCreated}
             />
         </div>
     )

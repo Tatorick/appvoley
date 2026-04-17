@@ -19,6 +19,7 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
         dni: '', // Cédula
         dob: '',
         gender: 'Femenino', // Default
+        phone: '',
         height: '',
         position: 'Punta', // Default
         jersey_number: '',
@@ -39,6 +40,7 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                 dni: '',
                 dob: '',
                 gender: 'Femenino',
+                phone: '',
                 height: '',
                 position: 'Punta',
                 jersey_number: '',
@@ -154,8 +156,9 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                     first_name: formData.first_name,
                     last_name: formData.last_name,
                     dni: formData.dni || null,
-                    dob: formData.dob,
+                    dob: formData.dob || null,
                     gender: formData.gender,
+                    phone: formData.phone || null,
                     height: formData.height ? parseInt(formData.height) : null,
                     position: formData.position,
                     jersey_number: formData.jersey_number ? parseInt(formData.jersey_number) : null,
@@ -316,6 +319,16 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                                         <option value="Femenino">Femenino</option>
                                         <option value="Masculino">Masculino</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Teléfono / WhatsApp</label>
+                                    <input
+                                        type="tel"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium font-mono"
+                                        placeholder="09XXXXXXXX"
+                                        value={formData.phone}
+                                        onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g,'') })}
+                                    />
                                 </div>
                             </div>
                         </div>

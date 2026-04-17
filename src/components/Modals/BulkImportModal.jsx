@@ -12,15 +12,15 @@ import {
 // ──────────────────────────────────────────────────────────
 const TEMPLATE_COLUMNS = [
   'Nombres', 'Apellidos', 'Fecha Nacimiento', 'Genero',
-  'Cedula DNI', 'Altura cm', 'Posicion', 'Dorsal',
+  'Cedula DNI', 'Telefono', 'Altura cm', 'Posicion', 'Dorsal',
   'Equipo', 'Genero Equipo', 'Categoria'
 ]
 
 const POSITIONS = ['Punta', 'Opuesto', 'Central', 'Armador', 'Libero', 'Universal']
 const EXAMPLE_ROWS = [
-  ['MARIA', 'PEREZ LOPEZ', '15/03/2005', 'Femenino', '1712345678', '172', 'Punta', '7', 'Sub 16', 'Femenino', 'Sub 16'],
-  ['ANA', 'GÓMEZ VERA', '22/09/2008', 'Femenino', '1709876543', '165', 'Libero', '1', 'Sub 14', 'Femenino', 'Sub 14'],
-  ['SOFIA', 'TORRES', '05/12/2002', 'Femenino', '1703456789', '178', 'Central', '3', 'Libre', 'Femenino', 'Libre'],
+  ['MARIA', 'PEREZ LOPEZ', '15/03/2005', 'Femenino', '1712345678', '0987654321', '172', 'Punta', '7', 'Sub 16', 'Femenino', 'Sub 16'],
+  ['ANA', 'GÓMEZ VERA', '22/09/2008', 'Femenino', '1709876543', '0991234567', '165', 'Libero', '1', 'Sub 14', 'Femenino', 'Sub 14'],
+  ['SOFIA', 'TORRES', '05/12/2002', 'Femenino', '1703456789', '', '178', 'Central', '3', 'Libre', 'Femenino', 'Libre'],
 ]
 
 // ──────────────────────────────────────────────────────────
@@ -80,6 +80,7 @@ function parseRows(sheet) {
         dob: parseExcelDate(dobRaw),
         gender: get('genero'),
         dni: get('cedula dni') || null,
+        phone: get('telefono') || null,
         height: get('altura cm') ? parseInt(get('altura cm')) || null : null,
         position: POSITIONS.includes(get('posicion')) ? get('posicion') : null,
         jersey_number: get('dorsal') ? parseInt(get('dorsal')) || null : null,
@@ -107,8 +108,8 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
     const wsData = [TEMPLATE_COLUMNS, ...EXAMPLE_ROWS]
     const ws = XLSX.utils.aoa_to_sheet(wsData)
 
-    // Column widths
-    ws['!cols'] = [18, 20, 18, 12, 14, 10, 12, 8, 14, 14, 14].map(w => ({ wch: w }))
+    // Column widths (12 cols)
+    ws['!cols'] = [18, 20, 18, 12, 14, 13, 10, 12, 8, 14, 14, 14].map(w => ({ wch: w }))
 
     XLSX.utils.book_append_sheet(wb, ws, 'Jugadoras')
     XLSX.writeFile(wb, 'plantilla_jugadoras.xlsx')
@@ -257,6 +258,7 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
             dob: row.dob,
             gender: row.gender,
             dni: row.dni || null,
+            phone: row.phone || null,
             height: row.height,
             position: row.position,
             jersey_number: row.jersey_number,
