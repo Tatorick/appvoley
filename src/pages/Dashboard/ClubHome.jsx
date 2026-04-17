@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
 import { AlertTriangle, Trophy, Users, MapPin, Loader2, ArrowRight, Wallet, Swords, Plus, Calendar, Activity } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import WelcomeModal from '../../components/Modals/WelcomeModal'
 
 // Enhanced Stat Card
 const StatCard = ({ icon: Icon, label, value, subtext, gradient, to }) => (
@@ -42,6 +43,15 @@ export default function ClubHome() {
       postsCount: 0,
       balance: 0
   })
+  // Show welcome modal only after a fresh registration
+  const [showWelcome, setShowWelcome] = useState(false)
+
+  useEffect(() => {
+    if (sessionStorage.getItem('showWelcome') === 'true') {
+      setShowWelcome(true)
+      sessionStorage.removeItem('showWelcome')
+    }
+  }, [])
 
   // Define fetchStats BEFORE using it in useEffect
   // Define fetchStats BEFORE using it in useEffect
@@ -84,6 +94,7 @@ export default function ClubHome() {
 
   return (
     <div className="space-y-8">
+      {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
       {/* Club Header & Status */}
       <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm relative overflow-hidden group">
         {/* Background Decoration */}

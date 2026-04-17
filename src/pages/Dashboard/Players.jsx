@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Users, Filter, Loader2, Edit2, Trash2, Lock } from 'lucide-react' // Added Lock
+import { Plus, Users, Filter, Loader2, Edit2, Trash2, Lock, FileSpreadsheet } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import AddPlayerModal from '../../components/Modals/AddPlayerModal'
+import BulkImportModal from '../../components/Modals/BulkImportModal'
 import { useNavigate } from 'react-router-dom'
-import { useClubData } from '../../hooks/useClubData' // Import Hook
+import { useClubData } from '../../hooks/useClubData'
 
 export default function Players() {
   const navigate = useNavigate()
@@ -16,6 +17,7 @@ export default function Players() {
   const [loading, setLoading] = useState(true)
   const [filterTeam, setFilterTeam] = useState('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
 
   // Permissions
   const canEdit = role === 'owner' || role === 'admin' || role === 'coach'
@@ -114,13 +116,22 @@ export default function Players() {
         
         {/* Permission Check for Add Button */}
         {canEdit && (
-            <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl transition-colors font-medium shadow-lg shadow-primary/25"
-            >
-            <Plus size={20} />
-            Nuevo Jugador
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsBulkModalOpen(true)}
+                className="flex items-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl transition-colors font-medium text-sm"
+              >
+                <FileSpreadsheet size={18} className="text-emerald-600" />
+                Importar Excel
+              </button>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl transition-colors font-medium shadow-lg shadow-primary/25"
+              >
+                <Plus size={20} />
+                Nuevo Jugador
+              </button>
+            </div>
         )}
       </div>
 
@@ -224,18 +235,20 @@ export default function Players() {
                                     <td className="px-6 py-4 text-right">
                                         {/* Permission Check for Actions */}
                                         {canEdit ? (
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <button 
                                                     onClick={() => navigate(`/app/players/${player.id}`)}
-                                                    className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg text-slate-400 hover:text-blue-600 transition-all shadow-sm"
+                                                    title="Editar jugador"
+                                                    className="p-2 hover:bg-blue-50 rounded-lg text-slate-400 hover:text-blue-600 transition-all"
                                                 >
-                                                    <Edit2 size={16} />
+                                                    <Edit2 size={15} />
                                                 </button>
                                                 <button 
                                                     onClick={() => handleDeletePlayer(player.id)}
-                                                    className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg text-slate-400 hover:text-red-600 transition-all shadow-sm"
+                                                    title="Eliminar jugador"
+                                                    className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-all"
                                                 >
-                                                    <Trash2 size={16} />
+                                                    <Trash2 size={15} />
                                                 </button>
                                             </div>
                                         ) : (
@@ -259,6 +272,12 @@ export default function Players() {
             isOpen={isModalOpen} 
             onClose={() => setIsModalOpen(false)} 
             onPlayerAdded={fetchData}
+        />
+        <BulkImportModal
+            isOpen={isBulkModalOpen}
+            onClose={() => setIsBulkModalOpen(false)}
+            clubId={club?.id}
+            onSuccess={fetchData}
         />
     </div>
   )

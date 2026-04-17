@@ -138,7 +138,7 @@ export default function RegisterClub() {
           telefono_contacto: formData.phone,
           ruc_dni: formData.rucDni,
           created_by: userId,
-          status: 'pendiente'
+          status: 'aprobado' // Auto-approved for beta — enable manual verification later
         })
         .select()
         .single()
@@ -156,6 +156,8 @@ export default function RegisterClub() {
       
       if (memberError) console.error('Member creation error:', memberError) // Non-fatal but problematic
 
+      // Signal welcome modal for the first page load
+      sessionStorage.setItem('showWelcome', 'true')
       navigate('/app')
 
     } catch (err) {
@@ -273,7 +275,7 @@ export default function RegisterClub() {
                                     type="text" name="city" required
                                     value={formData.city} onChange={handleChange}
                                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                                    placeholder="Lima"
+                                    placeholder="Cuenca"
                                 />
                             </div>
                         </div>
