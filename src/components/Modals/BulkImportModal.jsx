@@ -12,14 +12,15 @@ import {
 // ──────────────────────────────────────────────────────────
 const TEMPLATE_COLUMNS = [
   'Nombres', 'Apellidos', 'Fecha Nacimiento', 'Genero',
-  'Cedula DNI', 'Altura cm', 'Posicion', 'Dorsal', 'Equipo'
+  'Cedula DNI', 'Altura cm', 'Posicion', 'Dorsal',
+  'Equipo', 'Genero Equipo', 'Categoria'
 ]
 
 const POSITIONS = ['Punta', 'Opuesto', 'Central', 'Armador', 'Libero', 'Universal']
 const EXAMPLE_ROWS = [
-  ['MARIA', 'PEREZ LOPEZ', '15/03/2005', 'Femenino', '1712345678', '172', 'Punta', '7', 'Sub 16'],
-  ['ANA', 'GÓMEZ VERA', '22/09/2008', 'Femenino', '1709876543', '165', 'Libero', '1', 'Sub 14'],
-  ['SOFIA', 'TORRES', '05/12/2002', 'Femenino', '', '178', 'Central', '3', 'Libre'],
+  ['MARIA', 'PEREZ LOPEZ', '15/03/2005', 'Femenino', '1712345678', '172', 'Punta', '7', 'Sub 16', 'Femenino', 'Sub 16'],
+  ['ANA', 'GÓMEZ VERA', '22/09/2008', 'Femenino', '1709876543', '165', 'Libero', '1', 'Sub 14', 'Femenino', 'Sub 14'],
+  ['SOFIA', 'TORRES', '05/12/2002', 'Femenino', '1703456789', '178', 'Central', '3', 'Libre', 'Femenino', 'Libre'],
 ]
 
 // ──────────────────────────────────────────────────────────
@@ -47,7 +48,8 @@ function validateRow(row, index) {
   if (!row.last_name?.trim()) errors.push('Apellidos requerido')
   if (!row.dob) errors.push('Fecha de nacimiento inválida')
   if (!['Femenino', 'Masculino'].includes(row.gender)) errors.push('Género debe ser Femenino o Masculino')
-  if (row.dni && !validateId(row.dni)) errors.push('Cédula DNI inválida')
+  if (!row.dni) errors.push('Cédula DNI es obligatoria')
+  else if (!validateId(row.dni)) errors.push('Cédula DNI inválida (dígito verificador incorrecto)')
   return errors
 }
 
@@ -82,6 +84,8 @@ function parseRows(sheet) {
         position: POSITIONS.includes(get('posicion')) ? get('posicion') : null,
         jersey_number: get('dorsal') ? parseInt(get('dorsal')) || null : null,
         team_name: get('equipo') || null,
+        team_gender: get('genero equipo') || null,
+        team_category: get('categoria') || null,
       }
     })
 }
@@ -104,7 +108,7 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
     const ws = XLSX.utils.aoa_to_sheet(wsData)
 
     // Column widths
-    ws['!cols'] = [18, 20, 18, 12, 14, 10, 12, 8, 14].map(w => ({ wch: w }))
+    ws['!cols'] = [18, 20, 18, 12, 14, 10, 12, 8, 14, 14, 14].map(w => ({ wch: w }))
 
     XLSX.utils.book_append_sheet(wb, ws, 'Jugadoras')
     XLSX.writeFile(wb, 'plantilla_jugadoras.xlsx')
@@ -164,9 +168,10 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
     // Cache teams to avoid duplicate DB lookups/creates
     const teamCache = {} // name -> id
 
-    const getOrCreateTeam = async (teamName) => {
+    const getOrCreateTeam = async (teamName, teamGender, teamCategory) => {
       if (!teamName) return null
-      if (teamCache[teamName]) return teamCache[teamName]
+      const cacheKey = teamName.trim().toLowerCase()
+      if (teamCache[cacheKey]) return teamCache[cacheKey]
 
       // Try to find existing team
       const { data: existing } = await supabase
@@ -177,14 +182,40 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
         .maybeSingle()
 
       if (existing) {
-        teamCache[teamName] = existing.id
+        teamCache[cacheKey] = existing.id
         return existing.id
       }
 
-      // Create new team
+      // If category name provided, find or create it
+      let categoryId = null
+      if (teamCategory) {
+        const { data: existingCat } = await supabase
+          .from('categories')
+          .select('id')
+          .ilike('nombre', teamCategory.trim())
+          .maybeSingle()
+
+        if (existingCat) {
+          categoryId = existingCat.id
+        } else {
+          const { data: newCat } = await supabase
+            .from('categories')
+            .insert({ nombre: teamCategory.trim(), club_id: clubId, edad_min: 0, edad_max: 99 })
+            .select('id')
+            .single()
+          categoryId = newCat?.id || null
+        }
+      }
+
+      // Create new team with full info
       const { data: created, error } = await supabase
         .from('teams')
-        .insert({ nombre: teamName.trim(), club_id: clubId })
+        .insert({
+          nombre: teamName.trim(),
+          club_id: clubId,
+          genero: teamGender || 'Mixto',
+          category_id: categoryId
+        })
         .select('id')
         .single()
 
@@ -193,7 +224,7 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
         return null
       }
 
-      teamCache[teamName] = created.id
+      teamCache[cacheKey] = created.id
       return created.id
     }
 
@@ -242,7 +273,7 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
 
         // 3. Get or create team and assign
         if (row.team_name) {
-          const teamId = await getOrCreateTeam(row.team_name)
+          const teamId = await getOrCreateTeam(row.team_name, row.team_gender, row.team_category)
           if (teamId) {
             await supabase.from('team_assignments').insert({
               player_id: player.id,
@@ -368,7 +399,7 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
                     </span>
                   ))}
                 </div>
-                <p className="text-xs text-slate-400 mt-2">* Las columnas Nombres, Apellidos, Fecha Nacimiento y Género son obligatorias.</p>
+                <p className="text-xs text-slate-400 mt-2">Los campos Nombres, Apellidos, Fecha Nacimiento, Género y Cédula DNI son <strong>obligatorios</strong>. Si pones un Equipo, puedes indicar su Género y Categoría para crearlo automáticamente.</p>
               </div>
             </div>
           )}

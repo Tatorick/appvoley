@@ -119,8 +119,14 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
         try {
             if (!clubId) throw new Error("No se pudo identificar el club.")
 
+            // Validate required fields
+            if (!formData.first_name.trim()) throw new Error("El nombre es obligatorio.")
+            if (!formData.last_name.trim()) throw new Error("Los apellidos son obligatorios.")
+            if (!formData.dni.trim()) throw new Error("La Cédula de Identidad es obligatoria.")
+            if (!formData.gender) throw new Error("El género es obligatorio.")
+
             // Validate ID format
-            if (formData.dni && !validateId(formData.dni)) {
+            if (!validateId(formData.dni)) {
                 throw new Error("La Cédula de Identidad ingresada no es válida (Ecuador).")
             }
 
@@ -244,7 +250,9 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Nombres</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">
+                                        Nombres <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text" required
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
@@ -254,7 +262,9 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Apellidos</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">
+                                        Apellidos <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text" required
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
@@ -264,36 +274,41 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                                     />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Cédula de Identidad</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">
+                                        Cédula de Identidad <span className="text-red-500">*</span>
+                                    </label>
                                     <input
-                                        type="text"
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                                        type="text" required maxLength={13}
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium font-mono tracking-widest"
                                         placeholder="1712345678"
                                         value={formData.dni}
                                         onChange={e => {
-                                            const val = e.target.value
+                                            const val = e.target.value.replace(/\D/g, '') // only digits
                                             setFormData({ ...formData, dni: val })
                                             if (error) setError(null)
-                                            // Auto-check if length is 10 (Ecuadorian ID length)
-                                            if (val.length === 10) {
-                                                checkDni(val)
-                                            }
+                                            if (val.length === 10) checkDni(val)
                                         }}
                                         onBlur={() => checkDni(formData.dni)}
                                     />
+                                    <p className="text-xs text-slate-400 mt-1">10 dígitos — Cédula ecuatoriana válida requerida.</p>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Fecha de Nacimiento</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">
+                                        Fecha de Nacimiento
+                                    </label>
                                     <input
-                                        type="date" required
+                                        type="date"
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                                         value={formData.dob}
                                         onChange={e => setFormData({ ...formData, dob: e.target.value })}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Género</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">
+                                        Género <span className="text-red-500">*</span>
+                                    </label>
                                     <select
+                                        required
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                                         value={formData.gender}
                                         onChange={e => setFormData({ ...formData, gender: e.target.value })}
