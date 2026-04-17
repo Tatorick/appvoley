@@ -4,6 +4,8 @@ import Landing from './pages/Landing'
 import Login from './pages/Auth/Login'
 import RegisterClub from './pages/Auth/RegisterClub'
 import JoinClub from './pages/Auth/JoinClub'
+import ForgotPassword from './pages/Auth/ForgotPassword'
+import ResetPassword from './pages/Auth/ResetPassword'
 import DashboardLayout from './components/DashboardLayout'
 import ClubHome from './pages/Dashboard/ClubHome'
 import Teams from './pages/Dashboard/Teams'
@@ -82,7 +84,10 @@ function App() {
                         </AuthRoute>
                     } />
 
-                    {/* New /join route */}
+                    {/* Password recovery routes — public, no auth required */}
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+
                     {/* New /join route - Accessible by both guest and auth */}
                     <Route path="/join" element={<JoinClub />} />
 
