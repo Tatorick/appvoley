@@ -6,6 +6,7 @@ import RegisterClub from './pages/Auth/RegisterClub'
 import JoinClub from './pages/Auth/JoinClub'
 import ForgotPassword from './pages/Auth/ForgotPassword'
 import ResetPassword from './pages/Auth/ResetPassword'
+import SetupClub from './pages/Auth/SetupClub'
 import DashboardLayout from './components/DashboardLayout'
 import ClubHome from './pages/Dashboard/ClubHome'
 import Teams from './pages/Dashboard/Teams'
@@ -87,6 +88,9 @@ function App() {
                     {/* Password recovery routes — public, no auth required */}
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+
+                    {/* Post-Google-OAuth club setup — must be public (user is auth'd but has no club yet) */}
+                    <Route path="/setup-club" element={<SetupClub />} />
 
                     {/* New /join route - Accessible by both guest and auth */}
                     <Route path="/join" element={<JoinClub />} />
