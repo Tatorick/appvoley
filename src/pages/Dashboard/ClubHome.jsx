@@ -43,15 +43,16 @@ export default function ClubHome() {
       postsCount: 0,
       balance: 0
   })
-  // Show welcome modal only after a fresh registration
   const [showWelcome, setShowWelcome] = useState(false)
+  // Show welcome modal ONLY once club data is confirmed loaded
 
+  // (not on bare mount — that fires before club resolves and the modal never renders)
   useEffect(() => {
-    if (sessionStorage.getItem('showWelcome') === 'true') {
+    if (!clubLoading && club && sessionStorage.getItem('showWelcome') === 'true') {
       setShowWelcome(true)
       sessionStorage.removeItem('showWelcome')
     }
-  }, [])
+  }, [clubLoading, club])
 
   // Define fetchStats BEFORE using it in useEffect
   // Define fetchStats BEFORE using it in useEffect

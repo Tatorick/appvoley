@@ -9,8 +9,13 @@ export function useClubData() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) return
-
+    if (!user) {
+      // Auth not ready yet — don't hang in loading state
+      setClub(null)
+      setRole(null)
+      setLoading(false)
+      return
+    }
     async function fetchClubAndRole() {
       setLoading(true)
       try {
@@ -35,8 +40,7 @@ export function useClubData() {
 
           if (memberData && memberData.clubs) {
             setClub(memberData.clubs)
-            // Use the role from the member table
-            setRole(memberData.role || 'assistant') // Fallback just in case
+            setRole(memberData.role_in_club || memberData.role || 'assistant')
           } else {
              // No club found
              setClub(null)
