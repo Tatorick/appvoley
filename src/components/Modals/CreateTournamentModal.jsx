@@ -17,7 +17,7 @@ const emptyMatch = () => ({
     _key: Math.random()
 })
 
-export default function CreateTournamentModal({ isOpen, onClose, onSuccess, clubId }) {
+export default function CreateTournamentModal({ isOpen, onClose, onSuccess, clubId, tournamentToEdit }) {
     const [step, setStep] = useState(1) // 1 = datos, 2 = calendario
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -32,14 +32,41 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
     })
     const [matches, setMatches] = useState([]) // Partidos del calendario
 
+    React.useEffect(() => {
+        if (isOpen) {
+            if (tournamentToEdit) {
+                setFormData({
+                    name: tournamentToEdit.name || '',
+                    location: tournamentToEdit.location || '',
+                    start_date: tournamentToEdit.start_date || '',
+                    end_date: tournamentToEdit.end_date || '',
+                    cost_per_player: tournamentToEdit.cost_per_player?.toString() || '',
+                    description: tournamentToEdit.description || '',
+                    status: tournamentToEdit.status || 'planned'
+                })
+                setStep(1)
+            } else {
+                setFormData({
+                    name: '', location: '', start_date: '', end_date: '',
+                    cost_per_player: '', description: '', status: 'planned'
+                })
+                setStep(1)
+                setMatches([])
+            }
+            setError(null)
+        }
+    }, [isOpen, tournamentToEdit])
+
     const resetAll = () => {
         setStep(1)
         setError(null)
-        setFormData({
-            name: '', location: '', start_date: '', end_date: '',
-            cost_per_player: '', description: '', status: 'planned'
-        })
-        setMatches([])
+        if (!tournamentToEdit) {
+            setFormData({
+                name: '', location: '', start_date: '', end_date: '',
+                cost_per_player: '', description: '', status: 'planned'
+            })
+            setMatches([])
+        }
     }
 
     const handleClose = () => {
@@ -57,7 +84,12 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
         if (cleanLocation.length < 3) return setError('La ubicación debe tener al menos 3 caracteres.')
         if (!formData.start_date || !formData.end_date) return setError('Las fechas son requeridas.')
         if (formData.end_date < formData.start_date) return setError('La fecha de fin no puede ser anterior a la de inicio.')
-        setStep(2)
+        
+        if (tournamentToEdit) {
+            handleSubmit() // Si edita, guardar directamente en el paso 1
+        } else {
+            setStep(2)
+        }
     }
 
     // ── Manejo de partidos del calendario ──
@@ -69,55 +101,73 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
         setMatches(prev => prev.map(m => m._key === key ? { ...m, [field]: value } : m))
     }
 
-    // ── Paso 2: guardar todo ──
+    // ── Guardar todo ──
     const handleSubmit = async () => {
         setLoading(true)
         setError(null)
         try {
-            // Crear el torneo
-            const { data: tournament, error: tError } = await supabase
-                .from('tournaments')
-                .insert({
-                    club_id: clubId,
-                    name: formData.name.trim(),
-                    location: formData.location.trim(),
-                    start_date: formData.start_date,
-                    end_date: formData.end_date,
-                    cost_per_player: formData.cost_per_player ? parseFloat(formData.cost_per_player) : 0,
-                    description: formData.description,
-                    status: formData.status
-                })
-                .select('id')
-                .single()
+            if (tournamentToEdit) {
+                // Actualizar torneo existente
+                const { error: tError } = await supabase
+                    .from('tournaments')
+                    .update({
+                        name: formData.name.trim(),
+                        location: formData.location.trim(),
+                        start_date: formData.start_date,
+                        end_date: formData.end_date,
+                        cost_per_player: formData.cost_per_player ? parseFloat(formData.cost_per_player) : 0,
+                        description: formData.description,
+                        status: formData.status
+                    })
+                    .eq('id', tournamentToEdit.id)
 
-            if (tError) throw tError
+                if (tError) throw tError
+            } else {
+                // Crear el torneo
+                const { data: tournament, error: tError } = await supabase
+                    .from('tournaments')
+                    .insert({
+                        club_id: clubId,
+                        name: formData.name.trim(),
+                        location: formData.location.trim(),
+                        start_date: formData.start_date,
+                        end_date: formData.end_date,
+                        cost_per_player: formData.cost_per_player ? parseFloat(formData.cost_per_player) : 0,
+                        description: formData.description,
+                        status: formData.status
+                    })
+                    .select('id')
+                    .single()
 
-            // Insertar partidos del calendario si los hay
-            const validMatches = matches.filter(m => m.match_date && m.opponent.trim())
-            if (validMatches.length > 0) {
-                const scheduleRows = validMatches.map(m => ({
-                    tournament_id: tournament.id,
-                    match_date: m.match_date,
-                    match_time: m.match_time || null,
-                    opponent: m.opponent.trim(),
-                    venue: m.venue.trim() || null,
-                    phase: m.phase || 'Fase de grupos',
-                    notes: m.notes.trim() || null,
-                    status: 'scheduled'
-                }))
+                if (tError) throw tError
 
-                const { error: sError } = await supabase
-                    .from('tournament_schedule')
-                    .insert(scheduleRows)
+                // Insertar partidos del calendario si los hay
+                const validMatches = matches.filter(m => m.match_date && m.opponent.trim())
+                if (validMatches.length > 0) {
+                    const scheduleRows = validMatches.map(m => ({
+                        tournament_id: tournament.id,
+                        match_date: m.match_date,
+                        match_time: m.match_time || null,
+                        opponent: m.opponent.trim(),
+                        venue: m.venue.trim() || null,
+                        phase: m.phase || 'Fase de grupos',
+                        notes: m.notes.trim() || null,
+                        status: 'scheduled'
+                    }))
 
-                if (sError) throw sError
+                    const { error: sError } = await supabase
+                        .from('tournament_schedule')
+                        .insert(scheduleRows)
+
+                    if (sError) throw sError
+                }
             }
 
             onSuccess()
             handleClose()
         } catch (err) {
             console.error(err)
-            setError(err.message || 'Error al crear el torneo')
+            setError(err.message || 'Error al guardar el torneo')
         } finally {
             setLoading(false)
         }
@@ -134,9 +184,9 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
                     <div className="flex items-center gap-3">
                         <Trophy size={20} className="text-yellow-500" />
                         <div>
-                            <h2 className="font-bold text-slate-800 leading-tight">Nuevo Torneo</h2>
+                            <h2 className="font-bold text-slate-800 leading-tight">{tournamentToEdit ? 'Editar Torneo' : 'Nuevo Torneo'}</h2>
                             <p className="text-xs text-slate-400">
-                                Paso {step} de 2 — {step === 1 ? 'Información general' : 'Calendario de partidos'}
+                                {tournamentToEdit ? 'Modifica los detalles del evento' : `Paso ${step} de 2 — ${step === 1 ? 'Información general' : 'Calendario de partidos'}`}
                             </p>
                         </div>
                     </div>
@@ -395,9 +445,10 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
                             </button>
                             <button
                                 type="submit" form="tournament-form"
-                                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center gap-2"
+                                disabled={loading}
+                                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center gap-2 disabled:opacity-60"
                             >
-                                Siguiente <ChevronRight size={18} />
+                                {tournamentToEdit ? (loading ? 'Guardando...' : 'Guardar Cambios') : (<>Siguiente <ChevronRight size={18} /></>)}
                             </button>
                         </>
                     ) : (
