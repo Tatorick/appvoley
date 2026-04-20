@@ -32,10 +32,17 @@ export default function PortalLogin() {
               throw new Error(data?.error || 'Datos incorrectos')
           }
 
-          // Success! Store data in state/context or pass via navigation state
-          // For security, maybe sessionStorage? Or just pass state to next route.
-          // Let's pass via state to avoid complex global state for this simple portal.
-          navigate('/portal/dashboard', { state: { playerData: data } })
+          // Success! Store data + login credentials (needed for correction request RPC)
+          navigate('/portal/dashboard', {
+              state: {
+                  playerData: data,
+                  loginData: {
+                      club_code: formData.club_code,
+                      dni: formData.dni,
+                      dob: formData.dob
+                  }
+              }
+          })
 
       } catch (err) {
           console.error(err)

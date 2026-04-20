@@ -1,8 +1,24 @@
 import React, { useState } from 'react'
-import { X, Save, Trophy, MapPin, Calendar, DollarSign, AlertCircle } from 'lucide-react'
+import {
+    X, Save, Trophy, MapPin, Calendar, DollarSign, AlertCircle,
+    Plus, Trash2, ChevronRight, ChevronLeft, Clock, Swords
+} from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
+const PHASES = ['Fase de grupos', 'Cuartos de final', 'Semifinal', 'Tercer puesto', 'Final', 'Partido amistoso', 'Otro']
+
+const emptyMatch = () => ({
+    match_date: '',
+    match_time: '',
+    opponent: '',
+    venue: '',
+    phase: 'Fase de grupos',
+    notes: '',
+    _key: Math.random()
+})
+
 export default function CreateTournamentModal({ isOpen, onClose, onSuccess, clubId }) {
+    const [step, setStep] = useState(1) // 1 = datos, 2 = calendario
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [formData, setFormData] = useState({
@@ -14,43 +30,94 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
         description: '',
         status: 'planned'
     })
+    const [matches, setMatches] = useState([]) // Partidos del calendario
 
-    const handleSubmit = async (e) => {
+    const resetAll = () => {
+        setStep(1)
+        setError(null)
+        setFormData({
+            name: '', location: '', start_date: '', end_date: '',
+            cost_per_player: '', description: '', status: 'planned'
+        })
+        setMatches([])
+    }
+
+    const handleClose = () => {
+        resetAll()
+        onClose()
+    }
+
+    // ── Paso 1: validar y avanzar ──
+    const handleStep1Next = (e) => {
         e.preventDefault()
+        setError(null)
+        const cleanName = formData.name.trim()
+        const cleanLocation = formData.location.trim()
+        if (cleanName.length < 3) return setError('El nombre del torneo debe tener al menos 3 caracteres.')
+        if (cleanLocation.length < 3) return setError('La ubicación debe tener al menos 3 caracteres.')
+        if (!formData.start_date || !formData.end_date) return setError('Las fechas son requeridas.')
+        if (formData.end_date < formData.start_date) return setError('La fecha de fin no puede ser anterior a la de inicio.')
+        setStep(2)
+    }
+
+    // ── Manejo de partidos del calendario ──
+    const addMatch = () => setMatches(prev => [...prev, emptyMatch()])
+
+    const removeMatch = (key) => setMatches(prev => prev.filter(m => m._key !== key))
+
+    const updateMatch = (key, field, value) => {
+        setMatches(prev => prev.map(m => m._key === key ? { ...m, [field]: value } : m))
+    }
+
+    // ── Paso 2: guardar todo ──
+    const handleSubmit = async () => {
         setLoading(true)
         setError(null)
         try {
-            const cleanName = formData.name.trim()
-            const cleanLocation = formData.location.trim()
-
-            if (cleanName.length < 3) throw new Error('El nombre del torneo debe tener al menos 3 caracteres.')
-            if (cleanLocation.length < 3) throw new Error('La ubicación debe tener al menos 3 caracteres.')
-
-            const { error } = await supabase
+            // Crear el torneo
+            const { data: tournament, error: tError } = await supabase
                 .from('tournaments')
                 .insert({
                     club_id: clubId,
-                    ...formData,
-                    name: cleanName,
-                    location: cleanLocation,
-                    cost_per_player: formData.cost_per_player ? parseFloat(formData.cost_per_player) : 0
+                    name: formData.name.trim(),
+                    location: formData.location.trim(),
+                    start_date: formData.start_date,
+                    end_date: formData.end_date,
+                    cost_per_player: formData.cost_per_player ? parseFloat(formData.cost_per_player) : 0,
+                    description: formData.description,
+                    status: formData.status
                 })
+                .select('id')
+                .single()
 
-            if (error) throw error
+            if (tError) throw tError
+
+            // Insertar partidos del calendario si los hay
+            const validMatches = matches.filter(m => m.match_date && m.opponent.trim())
+            if (validMatches.length > 0) {
+                const scheduleRows = validMatches.map(m => ({
+                    tournament_id: tournament.id,
+                    match_date: m.match_date,
+                    match_time: m.match_time || null,
+                    opponent: m.opponent.trim(),
+                    venue: m.venue.trim() || null,
+                    phase: m.phase || 'Fase de grupos',
+                    notes: m.notes.trim() || null,
+                    status: 'scheduled'
+                }))
+
+                const { error: sError } = await supabase
+                    .from('tournament_schedule')
+                    .insert(scheduleRows)
+
+                if (sError) throw sError
+            }
+
             onSuccess()
-            onClose()
-            setFormData({
-                name: '',
-                location: '',
-                start_date: '',
-                end_date: '',
-                cost_per_player: '',
-                description: '',
-                status: 'planned'
-            })
+            handleClose()
         } catch (err) {
             console.error(err)
-            setError(err.message || "Error al crear torneo")
+            setError(err.message || 'Error al crear el torneo')
         } finally {
             setLoading(false)
         }
@@ -60,116 +127,299 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+            <div className="bg-white w-full max-w-xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[92vh]">
+
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                    <div className="flex items-center gap-3">
                         <Trophy size={20} className="text-yellow-500" />
-                        Nuevo Torneo
-                    </h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                        <div>
+                            <h2 className="font-bold text-slate-800 leading-tight">Nuevo Torneo</h2>
+                            <p className="text-xs text-slate-400">
+                                Paso {step} de 2 — {step === 1 ? 'Información general' : 'Calendario de partidos'}
+                            </p>
+                        </div>
+                    </div>
+                    <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 transition-colors">
                         <X size={24} />
                     </button>
                 </div>
 
+                {/* Step indicators */}
+                <div className="flex px-6 pt-4 gap-2 shrink-0">
+                    {[1, 2].map(s => (
+                        <div key={s} className="flex items-center gap-2 flex-1">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
+                                step === s ? 'bg-yellow-500 border-yellow-500 text-white' :
+                                step > s ? 'bg-green-500 border-green-500 text-white' :
+                                'border-slate-200 text-slate-400'
+                            }`}>
+                                {step > s ? '✓' : s}
+                            </div>
+                            <span className={`text-xs font-medium hidden sm:block ${step === s ? 'text-slate-800' : 'text-slate-400'}`}>
+                                {s === 1 ? 'Datos del torneo' : 'Calendario (opcional)'}
+                            </span>
+                            {s < 2 && <div className="flex-1 h-px bg-slate-200 mx-1" />}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Error */}
                 {error && (
-                    <div className="mx-6 mt-4 p-3 bg-red-50 text-red-600 rounded-lg flex items-start gap-2 text-sm animate-fade-in">
+                    <div className="mx-6 mt-4 p-3 bg-red-50 text-red-600 rounded-lg flex items-start gap-2 text-sm">
                         <AlertCircle size={18} className="shrink-0 mt-0.5" />
                         <span>{error}</span>
                     </div>
                 )}
 
-                <form id="tournament-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto custom-scrollbar space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre del Evento</label>
-                        <input
-                            type="text" required
-                            value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20 font-bold text-slate-700"
-                            placeholder="Ej. Copa Nacional 2025"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Ubicación</label>
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                {/* ── STEP 1: Datos del torneo ── */}
+                {step === 1 && (
+                    <form id="tournament-form" onSubmit={handleStep1Next} className="p-6 overflow-y-auto custom-scrollbar space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre del Evento *</label>
                             <input
                                 type="text" required
-                                value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })}
-                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
-                                placeholder="Ciudad, País"
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20 font-bold text-slate-700"
+                                placeholder="Ej. Copa Nacional 2025"
                             />
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Fecha Inicio</label>
-                            <input
-                                type="date" required
-                                value={formData.start_date} onChange={e => setFormData({ ...formData, start_date: e.target.value })}
-                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Fecha Fin</label>
-                            <input
-                                type="date" required
-                                value={formData.end_date} onChange={e => setFormData({ ...formData, end_date: e.target.value })}
-                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Costo por Jugador</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Ciudad / País *</label>
                             <div className="relative">
-                                <DollarSign className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                                <MapPin className="absolute left-3 top-3.5 text-slate-400" size={18} />
                                 <input
-                                    type="number" step="0.01"
-                                    value={formData.cost_per_player} onChange={e => setFormData({ ...formData, cost_per_player: e.target.value })}
+                                    type="text" required
+                                    value={formData.location}
+                                    onChange={e => setFormData({ ...formData, location: e.target.value })}
                                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
-                                    placeholder="0.00"
+                                    placeholder="Ciudad, País"
                                 />
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Estado Inicial</label>
-                            <select
-                                value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}
-                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
-                            >
-                                <option value="planned">Planificado</option>
-                                <option value="confirmed">Confirmado</option>
-                            </select>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Fecha Inicio *</label>
+                                <input
+                                    type="date" required
+                                    value={formData.start_date}
+                                    onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Fecha Fin *</label>
+                                <input
+                                    type="date" required
+                                    value={formData.end_date}
+                                    min={formData.start_date}
+                                    onChange={e => setFormData({ ...formData, end_date: e.target.value })}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Descripción / Notas</label>
-                        <textarea
-                            value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
-                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20 h-24 resize-none"
-                            placeholder="Detalles del viaje, itinerario, etc."
-                        />
-                    </div>
-                </form>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Costo por Jugador</label>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                                    <input
+                                        type="number" step="0.01" min="0"
+                                        value={formData.cost_per_player}
+                                        onChange={e => setFormData({ ...formData, cost_per_player: e.target.value })}
+                                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Estado Inicial</label>
+                                <select
+                                    value={formData.status}
+                                    onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
+                                >
+                                    <option value="planned">Planificado</option>
+                                    <option value="confirmed">Confirmado</option>
+                                </select>
+                            </div>
+                        </div>
 
-                <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-xl transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit" form="tournament-form" disabled={loading}
-                        className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center gap-2"
-                    >
-                        {loading ? <span className="animate-spin">⌛</span> : <Save size={18} />}
-                        Crear Torneo
-                    </button>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Descripción / Notas</label>
+                            <textarea
+                                value={formData.description}
+                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20 h-20 resize-none"
+                                placeholder="Detalles del viaje, itinerario, etc."
+                            />
+                        </div>
+                    </form>
+                )}
+
+                {/* ── STEP 2: Calendario ── */}
+                {step === 2 && (
+                    <div className="p-6 overflow-y-auto custom-scrollbar space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-slate-600">
+                                    Agrega los partidos ahora o hazlo después desde los detalles del torneo.
+                                </p>
+                            </div>
+                            <button
+                                onClick={addMatch}
+                                className="flex items-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shrink-0"
+                            >
+                                <Plus size={14} /> Partido
+                            </button>
+                        </div>
+
+                        {matches.length === 0 ? (
+                            <div
+                                onClick={addMatch}
+                                className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-yellow-400 hover:bg-yellow-50/30 transition-all group"
+                            >
+                                <Calendar size={32} className="mx-auto text-slate-300 group-hover:text-yellow-400 mb-2 transition-colors" />
+                                <p className="text-slate-400 text-sm font-medium">No hay partidos agregados.</p>
+                                <p className="text-slate-300 text-xs mt-1">Clic para agregar el primer partido</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {matches.map((m, idx) => (
+                                    <div key={m._key} className="bg-slate-50 border border-slate-200 rounded-xl p-4 relative">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                                                <Swords size={13} /> Partido {idx + 1}
+                                            </span>
+                                            <button
+                                                onClick={() => removeMatch(m._key)}
+                                                className="text-slate-300 hover:text-red-500 transition-colors"
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Rival *</label>
+                                                <input
+                                                    type="text"
+                                                    value={m.opponent}
+                                                    onChange={e => updateMatch(m._key, 'opponent', e.target.value)}
+                                                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-yellow-400/30"
+                                                    placeholder="Nombre del rival"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Fase</label>
+                                                <select
+                                                    value={m.phase}
+                                                    onChange={e => updateMatch(m._key, 'phase', e.target.value)}
+                                                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-yellow-400/30"
+                                                >
+                                                    {PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-3 mb-3">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Fecha *</label>
+                                                <input
+                                                    type="date"
+                                                    value={m.match_date}
+                                                    min={formData.start_date}
+                                                    max={formData.end_date}
+                                                    onChange={e => updateMatch(m._key, 'match_date', e.target.value)}
+                                                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-yellow-400/30"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Hora</label>
+                                                <input
+                                                    type="time"
+                                                    value={m.match_time}
+                                                    onChange={e => updateMatch(m._key, 'match_time', e.target.value)}
+                                                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-yellow-400/30"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Cancha</label>
+                                                <input
+                                                    type="text"
+                                                    value={m.venue}
+                                                    onChange={e => updateMatch(m._key, 'venue', e.target.value)}
+                                                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-yellow-400/30"
+                                                    placeholder="Coliseo Norte"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Notas</label>
+                                            <input
+                                                type="text"
+                                                value={m.notes}
+                                                onChange={e => updateMatch(m._key, 'notes', e.target.value)}
+                                                className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-yellow-400/30"
+                                                placeholder="Observaciones opcionales"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <button
+                                    onClick={addMatch}
+                                    className="w-full py-2 border border-dashed border-slate-300 text-slate-400 text-sm rounded-xl hover:border-yellow-400 hover:text-yellow-600 transition-colors flex items-center justify-center gap-1.5"
+                                >
+                                    <Plus size={15} /> Agregar otro partido
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                    {step === 1 ? (
+                        <>
+                            <button
+                                onClick={handleClose}
+                                className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-xl transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit" form="tournament-form"
+                                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center gap-2"
+                            >
+                                Siguiente <ChevronRight size={18} />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => { setError(null); setStep(1) }}
+                                className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-2"
+                            >
+                                <ChevronLeft size={18} /> Atrás
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-xl shadow-lg shadow-yellow-500/20 transition-all flex items-center gap-2 disabled:opacity-60"
+                            >
+                                {loading ? <span className="animate-spin">⌛</span> : <Save size={18} />}
+                                {matches.filter(m => m.match_date && m.opponent.trim()).length > 0
+                                    ? `Crear Torneo + ${matches.filter(m => m.match_date && m.opponent.trim()).length} partido(s)`
+                                    : 'Crear Torneo'}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

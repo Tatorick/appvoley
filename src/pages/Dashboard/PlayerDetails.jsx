@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import PlayerStats from '../../components/Dashboard/PlayerStats'
@@ -15,6 +15,7 @@ export default function PlayerDetails() {
   const [loading, setLoading] = useState(true)
   const [player, setPlayer] = useState(null)
   const [activeTab, setActiveTab] = useState('general')
+  const [correctionRequests, setCorrectionRequests] = useState([])
 
   // Sub-data states
   const [medical, setMedical] = useState(null)
@@ -52,6 +53,14 @@ export default function PlayerDetails() {
         const sortedAssessments = (data.physical_assessments || []).sort((a,b) => new Date(b.assessment_date) - new Date(a.assessment_date))
         setAssessments(sortedAssessments)
 
+        // Fetch correction requests for this player
+        const { data: reqData } = await supabase
+            .from('player_correction_requests')
+            .select('*')
+            .eq('player_id', data.id)
+            .order('created_at', { ascending: false })
+        setCorrectionRequests(reqData || [])
+
     } catch (err) {
         console.error("Error details:", err)
         navigate('/app/players')
@@ -87,6 +96,12 @@ export default function PlayerDetails() {
             <TabButton active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} icon={DollarSign} label="Pagos" />
             <TabButton active={activeTab === 'physical'} onClick={() => setActiveTab('physical')} icon={Activity} label="Ficha Física" />
             <TabButton active={activeTab === 'medical'} onClick={() => setActiveTab('medical')} icon={FileText} label="Ficha Médica" />
+            <TabButton
+                active={activeTab === 'corrections'}
+                onClick={() => setActiveTab('corrections')}
+                icon={MessageSquare}
+                label={`Solicitudes${correctionRequests.filter(r => r.status === 'pending').length > 0 ? ` (${correctionRequests.filter(r => r.status === 'pending').length})` : ''}`}
+            />
         </div>
 
         {/* Content */}
@@ -96,6 +111,7 @@ export default function PlayerDetails() {
             {activeTab === 'payments' && <PaymentsTab player={player} />}
             {activeTab === 'medical' && <MedicalTab playerId={player.id} medicalData={medical} injuries={injuries} refresh={fetchPlayerDetails} />}
             {activeTab === 'physical' && <PhysicalTab playerId={player.id} assessments={assessments} refresh={fetchPlayerDetails} />}
+            {activeTab === 'corrections' && <CorrectionRequestsTab requests={correctionRequests} playerId={player.id} refresh={fetchPlayerDetails} />}
         </div>
     </div>
   )
@@ -1045,6 +1061,108 @@ function PhysicalTab({ playerId, assessments, refresh }) {
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    )
+}
+
+// --- Correction Requests Tab ---
+
+function CorrectionRequestsTab({ requests, playerId, refresh }) {
+    const handleStatusChange = async (reqId, newStatus) => {
+        try {
+            const { error } = await supabase
+                .from('player_correction_requests')
+                .update({ status: newStatus, reviewed_at: new Date().toISOString() })
+                .eq('id', reqId)
+            
+            if (error) throw error
+            refresh()
+        } catch (err) {
+            alert('Error actualizando estado: ' + err.message)
+        }
+    }
+
+    if (!requests || requests.length === 0) {
+        return (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center animate-in fade-in">
+                <MessageSquare size={40} className="mx-auto mb-3 text-slate-200" />
+                <p className="text-slate-400 font-medium">No hay solicitudes de corrección pendientes.</p>
+            </div>
+        )
+    }
+
+    const FIELD_LABELS = {
+        'first_name': 'Nombre', 'last_name': 'Apellido', 'dni': 'Cédula / DNI',
+        'position': 'Posición', 'jersey_number': 'Dorsal', 'dob': 'Fecha de nacimiento',
+        'phone': 'Teléfono', 'height': 'Altura', 'payment_monthly': 'Pago mensualidad',
+        'payment_tournament': 'Pago de torneo', 'other': 'Otro'
+    }
+
+    const STATUS_UI = {
+        'pending': { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+        'reviewed': { label: 'Revisada', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+        'applied': { label: 'Aplicada', color: 'bg-green-100 text-green-700 border-green-200' },
+        'rejected': { label: 'Rechazada', color: 'bg-red-100 text-red-700 border-red-200' },
+    }
+
+    return (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+            <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2 mb-4">
+                <MessageSquare size={20} className="text-primary"/> Historial de Solicitudes
+            </h3>
+            <div className="grid gap-4">
+                {requests.map(req => {
+                    const st = STATUS_UI[req.status] || STATUS_UI['pending']
+                    return (
+                        <div key={req.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                            <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                <div className="space-y-2 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${st.color}`}>
+                                            {st.label}
+                                        </span>
+                                        <span className="text-xs text-slate-400">
+                                            {new Date(req.created_at).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <p className="font-bold text-slate-800">
+                                        Campo a corregir: {" "}
+                                        <span className="text-primary">{FIELD_LABELS[req.field_name] || req.field_name}</span>
+                                    </p>
+                                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 grid sm:grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Valor Actual / Previo</p>
+                                            <p className="font-medium text-slate-500">{req.current_value || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Valor Solicitado</p>
+                                            <p className="font-bold text-slate-800">{req.requested_value}</p>
+                                        </div>
+                                    </div>
+                                    {req.notes && (
+                                        <p className="text-sm bg-blue-50/50 text-slate-600 p-3 rounded-lg border border-blue-100/50 italic">
+                                            "{req.notes}"
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex sm:flex-col gap-2 shrink-0">
+                                    <select 
+                                        className={`p-2 rounded-lg text-xs font-bold border outline-none ${req.status === 'pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-slate-50 border-slate-200 text-slate-700'}`}
+                                        value={req.status}
+                                        onChange={(e) => handleStatusChange(req.id, e.target.value)}
+                                        title="Cambiar estado"
+                                    >
+                                        <option value="pending">Marcar Pendiente</option>
+                                        <option value="reviewed">Marcar Revisada</option>
+                                        <option value="applied">Marcar Aplicada</option>
+                                        <option value="rejected">Rechazar</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )
