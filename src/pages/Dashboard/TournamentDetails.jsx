@@ -43,6 +43,11 @@ export default function TournamentDetails() {
     const [scoreModal, setScoreModal] = useState(null) // { id, our_score, opponent_score }
     const [savingScore, setSavingScore] = useState(false)
 
+    // General Tab Edit
+    const [editingGeneral, setEditingGeneral] = useState(false)
+    const [editForm, setEditForm] = useState({})
+    const [savingGeneral, setSavingGeneral] = useState(false)
+
     const canManage = role === 'owner' || role === 'admin' || role === 'coach'
 
     useEffect(() => {
@@ -154,6 +159,55 @@ export default function TournamentDetails() {
             // navigate('/app/tournaments') // Don't redirect on error, let user see it
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleEditTournament = () => {
+        setEditForm({
+            name: tournament.name || '',
+            location: tournament.location || '',
+            start_date: tournament.start_date || '',
+            end_date: tournament.end_date || '',
+            cost_per_player: tournament.cost_per_player || 0,
+            description: tournament.description || '',
+            status: tournament.status || 'planned'
+        })
+        setEditingGeneral(true)
+    }
+
+    const handleDeleteTournament = async () => {
+        if (!confirm('¿Estás seguro de eliminar este torneo? Todas las designaciones, calendario y pagos asociados se perderán.')) return
+        try {
+            const { error } = await supabase.from('tournaments').delete().eq('id', id)
+            if (error) throw error
+            navigate('/app/tournaments')
+        } catch (err) {
+            alert('Error eliminando torneo: ' + err.message)
+        }
+    }
+
+    const handleSaveGeneral = async () => {
+        setSavingGeneral(true)
+        try {
+            const { error } = await supabase
+                .from('tournaments')
+                .update({
+                    name: editForm.name,
+                    location: editForm.location,
+                    start_date: editForm.start_date,
+                    end_date: editForm.end_date,
+                    cost_per_player: parseFloat(editForm.cost_per_player) || 0,
+                    description: editForm.description,
+                    status: editForm.status
+                })
+                .eq('id', id)
+            if (error) throw error
+            await fetchTournamentDetails()
+            setEditingGeneral(false)
+        } catch (err) {
+            alert('Error guardando cambios: ' + err.message)
+        } finally {
+            setSavingGeneral(false)
         }
     }
 
@@ -919,31 +973,95 @@ export default function TournamentDetails() {
                 {/* GENERAL TAB */}
                 {activeTab === 'general' && (
                     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                        <h3 className="font-bold text-slate-800 mb-4">Información del Evento</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre</label>
-                                <p className="text-slate-800 font-medium">{tournament.name}</p>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Ubicación</label>
-                                <p className="text-slate-800 font-medium">{tournament.location}</p>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Fechas</label>
-                                <p className="text-slate-800 font-medium">
-                                    {new Date(tournament.start_date).toLocaleDateString()} - {new Date(tournament.end_date).toLocaleDateString()}
-                                </p>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Costo por Jugador</label>
-                                <p className="text-slate-800 font-medium">${tournament.cost_per_player}</p>
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Descripción</label>
-                                <p className="text-slate-600 text-sm whitespace-pre-wrap">{tournament.description || 'Sin descripción.'}</p>
-                            </div>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-slate-800">Información del Evento</h3>
+                            {canManage && !editingGeneral && (
+                                <div className="flex gap-2">
+                                    <button onClick={handleEditTournament} className="text-sm font-bold text-primary hover:bg-slate-50 px-3 py-1.5 rounded transition-colors flex items-center gap-2">
+                                        <Edit2 size={16}/> Editar
+                                    </button>
+                                    <button onClick={handleDeleteTournament} className="text-sm font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded transition-colors flex items-center gap-2">
+                                        <Trash2 size={16}/> Eliminar
+                                    </button>
+                                </div>
+                            )}
                         </div>
+
+                        {editingGeneral ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre</label>
+                                    <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full p-2 border rounded font-bold text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Ubicación</label>
+                                    <input type="text" value={editForm.location} onChange={e => setEditForm({...editForm, location: e.target.value})} className="w-full p-2 border rounded font-bold text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Fecha Inicio</label>
+                                    <input type="date" value={editForm.start_date} onChange={e => setEditForm({...editForm, start_date: e.target.value})} className="w-full p-2 border rounded font-medium text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Fecha Fin</label>
+                                    <input type="date" value={editForm.end_date} onChange={e => setEditForm({...editForm, end_date: e.target.value})} className="w-full p-2 border rounded font-medium text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Costo por Jugador</label>
+                                    <input type="number" value={editForm.cost_per_player} onChange={e => setEditForm({...editForm, cost_per_player: e.target.value})} className="w-full p-2 border rounded font-medium text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Estado</label>
+                                    <select value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})} className="w-full p-2 border rounded font-medium text-slate-700">
+                                        <option value="planned">Planificado</option>
+                                        <option value="confirmed">Confirmado</option>
+                                        <option value="completed">Finalizado</option>
+                                        <option value="canceled">Cancelado</option>
+                                    </select>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Descripción</label>
+                                    <textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="w-full p-2 border rounded font-medium text-slate-700" rows={3}></textarea>
+                                </div>
+                                <div className="md:col-span-2 flex gap-2 justify-end mt-2">
+                                    <button onClick={() => setEditingGeneral(false)} className="px-4 py-2 text-sm text-slate-500 font-medium hover:bg-slate-50 rounded-lg">Cancelar</button>
+                                    <button onClick={handleSaveGeneral} disabled={savingGeneral} className="px-4 py-2 text-sm bg-primary text-white font-bold rounded-lg hover:bg-primary-dark">
+                                        {savingGeneral ? 'Guardando...' : 'Guardar Cambios'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre</label>
+                                    <p className="text-slate-800 font-medium">{tournament.name}</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Ubicación</label>
+                                    <p className="text-slate-800 font-medium">{tournament.location}</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Fechas</label>
+                                    <p className="text-slate-800 font-medium">
+                                        {new Date(tournament.start_date).toLocaleDateString()} - {new Date(tournament.end_date).toLocaleDateString()}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Costo por Jugador</label>
+                                    <p className="text-slate-800 font-medium">${tournament.cost_per_player}</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Estado</label>
+                                    <p className="text-slate-800 font-medium capitalize flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${tournament.status === 'confirmed' ? 'bg-green-500' : tournament.status === 'canceled' ? 'bg-red-500' : 'bg-blue-500'}`}></span>
+                                        {tournament.status === 'planned' ? 'Planificado' : tournament.status === 'confirmed' ? 'Confirmado' : tournament.status === 'canceled' ? 'Cancelado' : 'Finalizado'}
+                                    </p>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Descripción</label>
+                                    <p className="text-slate-600 text-sm whitespace-pre-wrap">{tournament.description || 'Sin descripción.'}</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
