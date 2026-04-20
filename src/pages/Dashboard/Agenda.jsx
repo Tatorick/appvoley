@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Calendar, MapPin, Clock, Trophy, Filter, ChevronRight, Loader2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
 import AddMatchModal from '../../components/Modals/AddMatchModal'
@@ -18,29 +19,68 @@ export default function Agenda() {
 
   const canEdit = role === 'owner' || role === 'admin' || role === 'coach'
 
+  const navigate = useNavigate()
+
   const fetchMatches = React.useCallback(async () => {
     if (!club) return
     setLoading(true)
     try {
-        const { data, error } = await supabase
+        // 1. Obtener partidos sueltos de la tabla 'matches'
+        const { data: matchesData, error: mError } = await supabase
             .from('matches')
             .select(`
                 *,
                 teams (nombre, genero, categories(nombre))
             `)
             .eq('club_id', club.id)
-            .order('date', { ascending: activeTab === 'upcoming' }) 
-            // Usually upcoming ASC (soonest first), history DESC (newest first). 
-            // But Supabase sort is static in one query unless we split or sort in JS. 
-            // Let's sort in JS or fetch all and filter. Matches vol won't be huge yet.
-            // Better: Order by date DESC always, then filter in JS? 
-            // Or just Order by date ASC for everything and reverse for history?
             
-        if (error) throw error
-        setMatches(data || [])
+        if (mError) throw mError
+
+        // 2. Obtener partidos de los torneos activos
+        const { data: clubTournaments } = await supabase
+            .from('tournaments')
+            .select('id')
+            .eq('club_id', club.id)
+        
+        const tournamentIds = clubTournaments?.map(t => t.id) || []
+        
+        let tsData = []
+        if (tournamentIds.length > 0) {
+            const { data } = await supabase
+                .from('tournament_schedule')
+                .select(`
+                    *,
+                    tournaments (id, name, location)
+                `)
+                .in('tournament_id', tournamentIds)
+            tsData = data || []
+        }
+
+        // 3. Normalizar y mezclar ambos sets de datos
+        const normalMatches = (matchesData || []).map(m => ({
+            ...m,
+            is_tournament_match: false
+        }))
+
+        const tournamentMatches = tsData.map(m => ({
+            id: m.id,
+            date: m.match_date,
+            time: m.match_time || '12:00:00',
+            opponent_name: m.opponent,
+            score_us: m.our_score,
+            score_them: m.opponent_score,
+            status: m.status,
+            location: m.venue || m.tournaments?.location || '',
+            type: 'tournament',
+            teams: { nombre: `TORNEO: ${m.tournaments?.name || 'Torneo'}`, genero: '', categories: { nombre: m.phase || 'Fase grupos' } },
+            is_tournament_match: true,
+            tournament_id: m.tournament_id
+        }))
+
+        setMatches([...normalMatches, ...tournamentMatches])
     } catch (err) {
         console.error(err)
-        setError("Error al cargar partidos")
+        setError("Error al cargar partidos combinados")
     } finally {
         setLoading(false)
     }
@@ -61,8 +101,14 @@ export default function Agenda() {
 
   const handleEdit = (match) => {
       if(!canEdit) return
-      setMatchToEdit(match)
-      setIsModalOpen(true)
+      if (match.is_tournament_match) {
+          // Si es de torneo, redirigirlo a detalles del torneo
+          navigate('/app/tournaments/' + match.tournament_id)
+      } else {
+          // Si es partido suelto, abre modal para editar
+          setMatchToEdit(match)
+          setIsModalOpen(true)
+      }
   }
 
   const handleNew = () => {
@@ -185,10 +231,11 @@ function MatchCard({ match, onClick }) {
                         <span>{match.time.slice(0,5)}</span>
                     </div>
                     <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${
-                        match.type === 'tournament' ? 'bg-purple-100 text-purple-700' :
+                        match.is_tournament_match ? 'bg-purple-100 text-purple-700' :
+                        match.type === 'tournament' ? 'bg-indigo-100 text-indigo-700' :
                         match.type === 'league' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
                     }`}>
-                        {match.type === 'league' ? 'Liga' : match.type === 'tournament' ? 'Torneo' : 'Amistoso'}
+                        {match.is_tournament_match ? '🏆 Torneo Oficial' : match.type === 'league' ? 'Liga' : match.type === 'tournament' ? 'Torneo' : 'Amistoso'}
                     </span>
                 </div>
 
@@ -200,7 +247,7 @@ function MatchCard({ match, onClick }) {
                             <p className="font-bold text-slate-800">{match.teams?.nombre || 'Nuestro Equipo'}</p>
                             <p className="text-[10px] text-slate-400">{match.teams?.categories?.nombre} {match.teams?.genero}</p>
                         </div>
-                        {isCompleted && (
+                        {isCompleted && match.score_us != null && (
                             <span className={`text-xl font-bold ${weWon ? 'text-green-600' : 'text-slate-400'}`}>
                                 {match.score_us}
                             </span>
@@ -208,7 +255,7 @@ function MatchCard({ match, onClick }) {
                     </div>
                     
                     {/* VS Divider if not completed */}
-                    {!isCompleted && <div className="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest my-1">- VS -</div>}
+                    {(!isCompleted || match.score_us == null) && <div className="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest my-1">- VS -</div>}
 
                     {/* Them */}
                     <div className="flex justify-between items-center">
@@ -216,7 +263,7 @@ function MatchCard({ match, onClick }) {
                             <p className="font-bold text-slate-600">{match.opponent_name}</p>
                             <p className="text-[10px] text-slate-400">Rival</p>
                         </div>
-                        {isCompleted && (
+                        {isCompleted && match.score_them != null && (
                             <span className={`text-xl font-bold ${!weWon ? 'text-green-600' : 'text-slate-400'}`}>
                                 {match.score_them}
                             </span>
