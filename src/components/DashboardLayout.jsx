@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useClubData } from '../hooks/useClubData'
 import {
   LayoutDashboard, Users, User,
-  CreditCard, Swords, Settings, LogOut, Menu, X, ChevronRight, Calendar, BarChart3, CalendarCheck, Trophy
+  CreditCard, Swords, Settings, LogOut, Menu, X, ChevronRight, Calendar, BarChart3, CalendarCheck, Trophy, Loader2
 } from 'lucide-react'
 
 const SidebarItem = ({ icon: Icon, text, to, active }) => (
@@ -23,9 +23,21 @@ const SidebarItem = ({ icon: Icon, text, to, active }) => (
 
 export default function DashboardLayout() {
   const { user, signOut } = useAuth()
-  const { role } = useClubData()
+  const { club, role, loading } = useClubData()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="animate-spin text-primary" size={40} />
+      </div>
+    )
+  }
+
+  if (!club) {
+    return <Navigate to="/setup-club" replace />
+  }
 
   const isAssistant = role === 'assistant'
 
