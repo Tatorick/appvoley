@@ -59,11 +59,37 @@ export default function Settings() {
 }
 
 function GeneralSettings({ club, canManage }) {
+    const { user } = useAuth()
     const [formData, setFormData] = useState({
         nombre: club.nombre || '',
-        codigo: club.codigo || ''
+        codigo: club.codigo || '',
+        pais: club.pais || '',
+        ciudad: club.ciudad || '',
+        telefono_contacto: club.telefono_contacto || '',
+        ruc_dni: club.ruc_dni || '',
+        coachName: ''
     })
     const [saving, setSaving] = useState(false)
+    const [fetchingProfile, setFetchingProfile] = useState(true)
+
+    useEffect(() => {
+        async function fetchProfile() {
+            if (!user) return
+            try {
+                const { data } = await supabase.from('profiles').select('nombre_completo').eq('id', user.id).single()
+                if (data) {
+                    setFormData(prev => ({ ...prev, coachName: data.nombre_completo || user?.user_metadata?.full_name || '' }))
+                } else {
+                    setFormData(prev => ({ ...prev, coachName: user?.user_metadata?.full_name || '' }))
+                }
+            } catch (err) {
+                console.error("Error fetching profile", err)
+            } finally {
+                setFetchingProfile(false)
+            }
+        }
+        fetchProfile()
+    }, [user])
 
     const handleSave = async (e) => {
         e.preventDefault()
@@ -71,18 +97,40 @@ function GeneralSettings({ club, canManage }) {
 
         setSaving(true)
         try {
-            const { error } = await supabase
+            const { error: clubError } = await supabase
                 .from('clubs')
-                .update({ nombre: formData.nombre }) // Code usually not editable or handled separately? Let's allow Name edit.
+                .update({ 
+                    nombre: formData.nombre,
+                    pais: formData.pais,
+                    ciudad: formData.ciudad,
+                    telefono_contacto: formData.telefono_contacto,
+                    ruc_dni: formData.ruc_dni
+                })
                 .eq('id', club.id)
 
-            if (error) throw error
-            alert('Configuración guardada')
+            if (clubError) throw clubError
+
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ nombre_completo: formData.coachName })
+                .eq('id', user.id)
+
+            if (profileError) throw profileError
+
+            await supabase.auth.updateUser({
+                data: { full_name: formData.coachName }
+            })
+
+            alert('Configuración guardada exitosamente')
         } catch (err) {
             alert('Error al guardar: ' + err.message)
         } finally {
             setSaving(false)
         }
+    }
+
+    if (fetchingProfile) {
+        return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-primary" size={32}/></div>
     }
 
     return (
@@ -92,41 +140,118 @@ function GeneralSettings({ club, canManage }) {
                     <Lock size={20} />
                 </div>
             )}
-            <h3 className="font-bold text-slate-900 mb-4">Datos del Club</h3>
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSave} className="space-y-8">
+                {/* Datos del Club */}
                 <div>
-                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre del Club</label>
-                     <input 
-                        type="text" 
-                        value={formData.nombre} 
-                        onChange={e => setFormData({...formData, nombre: e.target.value})}
-                        disabled={!canManage}
-                        className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 font-medium ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`} 
-                    />
+                    <h3 className="font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Datos del Club</h3>
+                    <div className="space-y-4">
+                        <div>
+                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre del Club</label>
+                             <input 
+                                type="text" 
+                                value={formData.nombre} 
+                                onChange={e => setFormData({...formData, nombre: e.target.value})}
+                                disabled={!canManage}
+                                className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 font-medium ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`} 
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">País</label>
+                                 <input 
+                                    type="text" 
+                                    value={formData.pais} 
+                                    onChange={e => setFormData({...formData, pais: e.target.value})}
+                                    disabled={!canManage}
+                                    className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`} 
+                                />
+                            </div>
+                            <div>
+                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Ciudad</label>
+                                 <input 
+                                    type="text" 
+                                    value={formData.ciudad} 
+                                    onChange={e => setFormData({...formData, ciudad: e.target.value})}
+                                    disabled={!canManage}
+                                    className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`} 
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Teléfono</label>
+                                 <input 
+                                    type="text" 
+                                    value={formData.telefono_contacto} 
+                                    onChange={e => setFormData({...formData, telefono_contacto: e.target.value})}
+                                    disabled={!canManage}
+                                    className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`} 
+                                    placeholder="Ej: 0999999999"
+                                />
+                            </div>
+                            <div>
+                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">RUC / DNI</label>
+                                 <input 
+                                    type="text" 
+                                    value={formData.ruc_dni} 
+                                    onChange={e => setFormData({...formData, ruc_dni: e.target.value})}
+                                    disabled={!canManage}
+                                    className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`} 
+                                />
+                            </div>
+                        </div>
+                        <div>
+                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Código de Invitación / ID</label>
+                             <div className="flex items-center gap-2">
+                                <input 
+                                    type="text" 
+                                    disabled 
+                                    value={formData.codigo} 
+                                    className="w-full p-2 bg-slate-100 border rounded-lg text-slate-500 font-mono text-sm cursor-not-allowed" 
+                                />
+                                <button 
+                                    type="button" 
+                                    onClick={() => navigator.clipboard.writeText(formData.codigo)}
+                                    className="p-2 text-slate-400 hover:text-primary transition-colors bg-slate-100 rounded-lg hover:bg-slate-200"
+                                    title="Copiar código"
+                                >
+                                    <Copy size={18} />
+                                </button>
+                             </div>
+                             <p className="text-[10px] text-slate-400 mt-1">Comparte este código para que los asistentes se unan a tu club.</p>
+                        </div>
+                    </div>
                 </div>
+
+                {/* Datos del Entrenador */}
                 <div>
-                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Código / ID</label>
-                     <div className="flex items-center gap-2">
-                        <input 
-                            type="text" 
-                            disabled 
-                            value={formData.codigo} 
-                            className="w-full p-2 bg-slate-100 border rounded-lg text-slate-500 font-mono text-sm cursor-not-allowed" 
-                        />
-                        <button 
-                            type="button" 
-                            onClick={() => navigator.clipboard.writeText(formData.codigo)}
-                            className="p-2 text-slate-400 hover:text-primary transition-colors"
-                            title="Copiar código"
-                        >
-                            <Copy size={18} />
-                        </button>
-                     </div>
-                     <p className="text-[10px] text-slate-400 mt-1">Este código es único y no se puede cambiar.</p>
+                    <h3 className="font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Mi Perfil (Entrenador)</h3>
+                    <div className="space-y-4">
+                        <div>
+                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre Completo</label>
+                             <input 
+                                type="text" 
+                                value={formData.coachName} 
+                                onChange={e => setFormData({...formData, coachName: e.target.value})}
+                                disabled={!canManage}
+                                className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 font-medium ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`} 
+                            />
+                        </div>
+                        <div>
+                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Correo Electrónico</label>
+                             <input 
+                                type="email" 
+                                value={user?.email || ''} 
+                                disabled
+                                className="w-full p-2 bg-slate-100 border rounded-lg text-slate-500 text-sm cursor-not-allowed" 
+                            />
+                            <p className="text-[10px] text-slate-400 mt-1">El correo electrónico no puede ser modificado.</p>
+                        </div>
+                    </div>
                 </div>
 
                 {canManage && (
-                    <div className="pt-4">
+                    <div className="pt-4 flex justify-end">
                         <button 
                             type="submit" 
                             disabled={saving}
