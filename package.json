@@ -1,5 +1,5 @@
 {
-  "name": "temp_app",
+  "name": "appvoley",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,9 +8,22 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "mobile:sync": "npm run build && npx cap sync",
+    "mobile:android": "npm run build && npx cap sync && npx cap open android",
+    "mobile:ios": "npm run build && npx cap sync && npx cap open ios",
+    "mobile:run:android": "npm run build && npx cap sync && npx cap run android",
+    "cap:sync": "npx cap sync"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.3.1",
+    "@capacitor/push-notifications": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@supabase/supabase-js": "^2.87.1",
     "@tailwindcss/postcss": "^4.1.17",
     "lucide-react": "^0.559.0",

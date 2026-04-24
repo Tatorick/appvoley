@@ -1,0 +1,128 @@
+workflows:
+  # ─────────────────────────────────────────────────────────────
+  # ANDROID: Genera un APK de debug y un AAB de release
+  # ─────────────────────────────────────────────────────────────
+  android-workflow:
+    name: AppVoley - Android Build
+    max_build_duration: 60
+    environment:
+      node: v20.19.0
+      vars:
+        VITE_SUPABASE_URL: $VITE_SUPABASE_URL
+        VITE_SUPABASE_ANON_KEY: $VITE_SUPABASE_ANON_KEY
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Instalar dependencias web
+        script: npm ci
+
+      - name: Build web app
+        script: npm run build
+
+      - name: Sync Capacitor con Android
+        script: npx cap sync android
+
+      - name: Build Android APK (debug para pruebas)
+        script: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Build Android AAB (release para Play Store)
+        script: |
+          cd android
+          ./gradlew bundleRelease
+        ignore_failure: true
+
+    artifacts:
+      - android/app/build/outputs/**/*.apk
+      - android/app/build/outputs/**/*.aab
+
+    publishing:
+      email:
+        recipients:
+          - tu-email@ejemplo.com   # ← Cambia esto a tu email
+        notify:
+          success: true
+          failure: true
+
+  # ─────────────────────────────────────────────────────────────
+  # iOS: Genera el .ipa para TestFlight y App Store
+  # ─────────────────────────────────────────────────────────────
+  ios-workflow:
+    name: AppVoley - iOS Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+      node: v20.19.0
+      ios_signing:
+        distribution_type: app_store          # o "development" para pruebas
+        bundle_identifier: com.appvoley.app
+      vars:
+        VITE_SUPABASE_URL: $VITE_SUPABASE_URL
+        VITE_SUPABASE_ANON_KEY: $VITE_SUPABASE_ANON_KEY
+        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
+        APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Instalar dependencias web
+        script: npm ci
+
+      - name: Build web app
+        script: npm run build
+
+      - name: Sync Capacitor con iOS
+        script: npx cap sync ios
+
+      - name: Instalar dependencias Swift (CocoaPods/SPM)
+        script: |
+          cd ios/App
+          # Si usas CocoaPods (verificar si Podfile existe):
+          # pod install --repo-update
+          # Si usas Swift Package Manager (es el caso con Capacitor 6+), no se necesita nada
+
+      - name: Build y Archive iOS
+        script: |
+          xcode-project use-profiles
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath build/AppVoley.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=$APPLE_TEAM_ID
+
+      - name: Export IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace ios/App/App.xcworkspace \
+            --scheme App
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true    # Subir automáticamente a TestFlight
+        submit_to_app_store: false    # Cambiar a true cuando quieras publicar
+      email:
+        recipients:
+          - tu-email@ejemplo.com      # ← Cambia esto a tu email
+        notify:
+          success: true
+          failure: true

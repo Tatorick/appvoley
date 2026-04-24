@@ -1,0 +1,42 @@
+{
+  "appId": "com.appvoley.app",
+  "appName": "AppVoley",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2500,
+      "launchAutoHide": true,
+      "backgroundColor": "#2563EB",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "LIGHT",
+      "backgroundColor": "#2563EB",
+      "overlaysWebView": false
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": null,
+      "keystoreAlias": null
+    },
+    "backgroundColor": "#2563EB",
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#2563EB",
+    "scrollEnabled": true
+  }
+}

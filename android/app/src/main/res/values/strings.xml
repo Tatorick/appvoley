@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AppVoley</string>
+    <string name="title_activity_main">AppVoley</string>
+    <string name="package_name">com.appvoley.app</string>
+    <string name="custom_url_scheme">com.appvoley.app</string>
+</resources>

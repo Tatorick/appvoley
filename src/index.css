@@ -20,6 +20,64 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Elimina el delay de 300ms en taps para iOS/Android */
+  touch-action: manipulation;
+  /* Scroll nativo suave en iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe Areas para iPhone X+ (notch y home bar) */
+#root {
+  /* Respeta el área segura en todos los bordes */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Elimina el highlight azul al tocar elementos en Android/iOS */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none; /* desactiva menú contextual al mantener presionado imágenes */
+}
+
+/* Permite selección de texto donde sea necesario */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Tamaño mínimo de área táctil recomendado por Apple/Google: 44px */
+button, a, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Scrollbar personalizada (solo desktop, invisible en móvil) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animación de entrada suave */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
 }
 
 /* Utilities if strictly needed, but typically v4 handles this */
