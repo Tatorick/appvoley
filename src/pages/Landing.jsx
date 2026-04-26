@@ -8,8 +8,8 @@ export default function Landing() {
       {/* Navbar - Transparent/Glassmorphism */}
       <nav className="w-full py-4 px-6 fixed top-0 z-50 bg-white/10 backdrop-blur-md border-b border-white/20">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-light">
-            <img src="/img/logo.png" alt="AppVoley" className="h-8 w-auto" />
+          <div className="flex items-center">
+            <img src="/img/logo.png" alt="AppVoley" className="h-16 w-auto object-contain" />
           </div>
           <div className="flex gap-4">
             <Link 

@@ -72,8 +72,8 @@ export default function DashboardLayout() {
           }`}
       >
         <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-3 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-light">
-            <img src="/img/logo.png" alt="AppVoley" className="h-8 w-auto" />
+          <div className="flex items-center">
+            <img src="/img/logo.png" alt="AppVoley" className="h-16 w-auto object-contain" />
           </div>
         </div>
 
