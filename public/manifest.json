@@ -6,40 +6,50 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F8FAFC",
+  "background_color": "#ffffff",
   "theme_color": "#2563EB",
   "lang": "es",
-  "categories": ["sports", "productivity", "business"],
+  "categories": [
+    "sports",
+    "productivity",
+    "business"
+  ],
   "icons": [
     {
-      "src": "/img/icono.png",
-      "sizes": "144x144",
-      "type": "image/png",
+      "src": "/icons/icon-72.webp",
+      "sizes": "72x72",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/img/icono.png",
-      "sizes": "152x152",
-      "type": "image/png",
+      "src": "/icons/icon-96.webp",
+      "sizes": "96x96",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/img/icono.png",
+      "src": "/icons/icon-128.webp",
+      "sizes": "128x128",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.webp",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/img/icono.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/icons/icon-256.webp",
+      "sizes": "256x256",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/img/icono.png",
+      "src": "/icons/icon-512.webp",
+      "type": "image/webp",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
   "screenshots": [],
@@ -49,14 +59,24 @@
       "short_name": "Torneos",
       "description": "Ver torneos activos",
       "url": "/app/tournaments",
-      "icons": [{ "src": "/img/icono.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/img/icono.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Mis Jugadores",
       "short_name": "Jugadores",
       "description": "Gestionar jugadores del club",
       "url": "/app/players",
-      "icons": [{ "src": "/img/icono.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/img/icono.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
