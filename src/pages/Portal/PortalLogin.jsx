@@ -124,7 +124,7 @@ export default function PortalLogin() {
             </form>
             
             <div className="mt-8 text-center text-xs text-slate-500">
-                &copy; 2024 VoleyManager
+                &copy; 2024 AppVoley
             </div>
         </div>
     </div>
