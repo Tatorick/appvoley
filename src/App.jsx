@@ -15,6 +15,7 @@ import Players from './pages/Dashboard/Players'
 import PlayerDetails from './pages/Dashboard/PlayerDetails'
 import Settings from './pages/Dashboard/Settings'
 import Matchmaking from './pages/Dashboard/Matchmaking'
+import MatchmakingChat from './pages/Dashboard/MatchmakingChat'
 import Agenda from './pages/Dashboard/Agenda'
 import Attendance from './pages/Dashboard/Attendance'
 import Statistics from './pages/Dashboard/Statistics'
@@ -121,6 +122,7 @@ function App() {
                         <Route path="players/:id" element={<PlayerDetails />} />
                         <Route path="payments" element={<Payments />} />
                         <Route path="matchmaking" element={<Matchmaking />} />
+                        <Route path="matchmaking/chat/:requestId" element={<MatchmakingChat />} />
                         <Route path="agenda" element={<Agenda />} />
                         <Route path="attendance" element={<Attendance />} />
                         <Route path="tournaments" element={<Tournaments />} />

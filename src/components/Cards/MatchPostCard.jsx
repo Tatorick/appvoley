@@ -1,7 +1,7 @@
 import React from 'react'
 import { Calendar, MapPin, MessageCircle, Bed, Utensils, Bus, Trophy, Handshake } from 'lucide-react'
 
-export default function MatchPostCard({ post }) {
+export default function MatchPostCard({ post, onRequest }) {
   const isTournament = post.type === 'tournament'
   
   // Parse hospitality JSON if it's a string, or use as is
@@ -80,14 +80,24 @@ export default function MatchPostCard({ post }) {
             )}
         </div>
 
-        {/* Action */}
-        <button 
-            onClick={handleContact}
-            className="w-full mt-auto py-2.5 bg-slate-900 hover:bg-green-600 hover:shadow-green-500/25 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95"
-        >
-            <MessageCircle size={18} />
-            Contactar
-        </button>
+        {/* Actions */}
+        <div className={`mt-auto ${onRequest ? 'grid grid-cols-2 gap-2' : ''}`}>
+            {onRequest && (
+                <button
+                    onClick={onRequest}
+                    className="py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 active:scale-95 text-sm"
+                >
+                    ✋ Solicitar
+                </button>
+            )}
+            <button
+                onClick={handleContact}
+                className={`py-2.5 bg-slate-900 hover:bg-green-600 hover:shadow-green-500/25 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${onRequest ? 'text-sm' : 'w-full'}`}
+            >
+                <MessageCircle size={18} />
+                Contactar
+            </button>
+        </div>
       </div>
     </div>
   )
