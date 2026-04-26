@@ -49,11 +49,24 @@ input, textarea, [contenteditable] {
 }
 
 /* Tamaño mínimo de área táctil recomendado por Apple/Google: 44px */
-button, a, [role="button"] {
+button, [role="button"] {
   min-height: 44px;
   min-width: 44px;
   display: inline-flex;
   align-items: center;
+}
+
+/* Los <a> de navegación/sidebar deben ser block-level, NO inline-flex */
+nav a {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* Solo los <a> que actúan como botones (fuera de nav) tienen comportamiento inline */
+a:not(nav a) {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* Scrollbar personalizada (solo desktop, invisible en móvil) */
