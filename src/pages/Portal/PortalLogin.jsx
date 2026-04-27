@@ -53,70 +53,70 @@ export default function PortalLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
         <div className="p-6">
-            <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white font-medium w-fit transition-colors">
+            <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium w-fit transition-colors">
                 <ArrowLeft size={20} />
                 Volver al inicio
             </Link>
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
-            <div className="bg-white/10 backdrop-blur-md border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl animate-in zoom-in-95">
+            <div className="bg-white border border-slate-100 p-8 rounded-3xl w-full max-w-md shadow-xl animate-in zoom-in-95">
             <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-gradient-to-tr from-primary to-blue-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-primary/30 mb-4">
+                <div className="w-16 h-16 bg-gradient-to-tr from-primary to-blue-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
                     <User className="text-white" size={32} />
                 </div>
-                <h1 className="text-3xl font-bold text-white mb-2">Portal del Jugador</h1>
-                <p className="text-slate-400 text-sm">Consulta tus estadísticas y estado de cuenta</p>
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">Portal del Jugador</h1>
+                <p className="text-slate-500 text-sm">Consulta tus estadísticas y estado de cuenta</p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-5">
                 {error && (
-                    <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 text-sm font-medium text-center">
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium text-center">
                         {error}
                     </div>
                 )}
 
                 <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1 block">Código del Club</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase ml-1 mb-1.5 block">Código del Club</label>
                     <div className="relative">
-                        <ShieldCheck className="absolute left-3 top-3.5 text-slate-500" size={18}/>
+                        <ShieldCheck className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                         <input 
                             type="text" 
                             placeholder="Ej. CLUB-8X9"
                             required
                             value={formData.club_code}
                             onChange={e => setFormData({...formData, club_code: e.target.value})}
-                            className="w-full pl-10 p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+                            className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono transition-all"
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1 block">Cédula / DNI</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase ml-1 mb-1.5 block">Cédula / DNI</label>
                     <div className="relative">
-                        <User className="absolute left-3 top-3.5 text-slate-500" size={18}/>
+                        <User className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                         <input 
                             type="text" 
                             placeholder="Identificación del jugador"
                             required
                             value={formData.dni}
                             onChange={e => setFormData({...formData, dni: e.target.value})}
-                            className="w-full pl-10 p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1 block">Fecha de Nacimiento</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase ml-1 mb-1.5 block">Fecha de Nacimiento</label>
                     <div className="relative">
-                        <Calendar className="absolute left-3 top-3.5 text-slate-500" size={18}/>
+                        <Calendar className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                         <input 
                             type="date" 
                             required
                             value={formData.dob}
                             onChange={e => setFormData({...formData, dob: e.target.value})}
-                            className="w-full pl-10 p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                         />
                     </div>
                 </div>
@@ -124,14 +124,14 @@ export default function PortalLogin() {
                 <button 
                     type="submit" 
                     disabled={loading}
-                    className="w-full py-4 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 mt-4"
+                    className="w-full py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 mt-2"
                 >
                     {loading ? <Loader2 className="animate-spin"/> : <><span className="mr-1">Ingresar</span> <ArrowRight size={20}/></>}
                 </button>
             </form>
             
             <div className="mt-8 text-center text-xs text-slate-500">
-                &copy; 2024 AppVoley
+                &copy; {new Date().getFullYear()} AppVoley
             </div>
             </div>
         </div>
