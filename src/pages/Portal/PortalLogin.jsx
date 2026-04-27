@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Lock, User, Calendar, ArrowRight, Loader2, ShieldCheck } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Lock, User, Calendar, ArrowRight, Loader2, ShieldCheck, ArrowLeft } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 export default function PortalLogin() {
@@ -53,8 +53,15 @@ export default function PortalLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-md border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl animate-in zoom-in-95">
+    <div className="min-h-screen bg-slate-900 flex flex-col">
+        <div className="p-6">
+            <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white font-medium w-fit transition-colors">
+                <ArrowLeft size={20} />
+                Volver al inicio
+            </Link>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl animate-in zoom-in-95">
             <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-gradient-to-tr from-primary to-blue-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-primary/30 mb-4">
                     <User className="text-white" size={32} />
@@ -125,6 +132,7 @@ export default function PortalLogin() {
             
             <div className="mt-8 text-center text-xs text-slate-500">
                 &copy; 2024 AppVoley
+            </div>
             </div>
         </div>
     </div>

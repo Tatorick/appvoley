@@ -51,11 +51,11 @@ export default function Landing() {
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '0 5%', height: '72px',
+        padding: '0 5%', height: '88px',
         background: 'rgba(6,11,24,0.7)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
       }}>
-        <img src="/img/logo.png" alt="AppVoley" style={{ height: '52px', objectFit: 'contain' }} />
+        <img src="/img/logo.png" alt="AppVoley" style={{ height: '72px', objectFit: 'contain' }} />
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <Link to="/portal" style={{
             padding: '10px 20px', borderRadius: '10px', color: '#94A3B8',
@@ -332,7 +332,7 @@ export default function Landing() {
       {/* ─── FOOTER ─── */}
       <footer style={{ borderTop: '1px solid rgba(255,255,255,.07)', padding: '40px 5%' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-          <img src="/img/logo.png" alt="AppVoley" style={{ height: 44, objectFit: 'contain' }} />
+          <img src="/img/logo.png" alt="AppVoley" style={{ height: 60, objectFit: 'contain' }} />
           <p style={{ color: '#475569', fontSize: 13, margin: 0 }}>
             © 2026 AppVoley. Todos los derechos reservados.
           </p>

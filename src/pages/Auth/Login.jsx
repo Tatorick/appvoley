@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react'
+import { Mail, Lock, AlertCircle, Loader2, ArrowLeft } from 'lucide-react'
 
 function GoogleIcon() {
   return (
@@ -62,8 +62,15 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="p-6">
+        <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium w-fit transition-colors">
+          <ArrowLeft size={20} />
+          Volver al inicio
+        </Link>
+      </div>
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="p-8">
           <div className="text-center mb-8">
             <img src="/img/logo.png" alt="AppVoley" className="w-full max-w-[320px] h-auto object-contain mx-auto mb-4" />
@@ -166,6 +173,7 @@ export default function Login() {
               </Link>
             </p>
           </div>
+        </div>
         </div>
       </div>
     </div>
