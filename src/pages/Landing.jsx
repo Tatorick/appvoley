@@ -9,7 +9,7 @@ export default function Landing() {
       <nav className="w-full py-4 px-6 fixed top-0 z-50 bg-white/10 backdrop-blur-md border-b border-white/20">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center">
-            <img src="/img/logo.png" alt="AppVoley" className="h-16 w-auto object-contain" />
+            <img src="/img/logo.png" alt="AppVoley" className="h-16 md:h-20 w-auto object-contain" />
           </div>
           <div className="flex gap-4">
             <Link 
