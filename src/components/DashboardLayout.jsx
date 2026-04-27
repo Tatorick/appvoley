@@ -71,9 +71,9 @@ export default function DashboardLayout() {
         className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 lg:translate-x-0 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-2 border-b border-slate-100">
           <div className="flex items-center justify-center">
-            <img src="/img/logo.png" alt="AppVoley" className="w-full max-w-[200px] h-auto object-contain" />
+            <img src="/img/logo.png" alt="AppVoley" className="w-full max-w-[250px] h-auto object-contain" />
           </div>
         </div>
 

@@ -66,7 +66,7 @@ export default function Login() {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="p-8">
           <div className="text-center mb-8">
-            <img src="/img/logo.png" alt="AppVoley" className="w-full max-w-[280px] h-auto object-contain mx-auto mb-4" />
+            <img src="/img/logo.png" alt="AppVoley" className="w-full max-w-[320px] h-auto object-contain mx-auto mb-4" />
             <h2 className="text-3xl font-bold text-slate-900 mb-2">Bienvenido</h2>
             <p className="text-slate-500">Ingresa a tu cuenta de AppVoley</p>
           </div>
