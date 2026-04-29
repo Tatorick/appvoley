@@ -161,7 +161,7 @@ export default function MatchmakingChat() {
         } finally {
             setSending(false)
         }
-    }, [newMessage, club, user, requestId, sending, fetchMessages])
+    }, [newMessage, club, user?.id, requestId, sending, fetchMessages])
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {

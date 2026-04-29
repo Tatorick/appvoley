@@ -55,7 +55,7 @@ export function useClubData() {
     }
 
     fetchClubAndRole()
-  }, [user])
+  }, [user?.id])
 
   return { club, role, loading }
 }

@@ -52,7 +52,7 @@ export default function SetupClub() {
     }
 
     checkExistingClub()
-  }, [user, authLoading, navigate])
+  }, [user?.id, authLoading, navigate])
 
   const handleChange = (e) => {
     const { name, value } = e.target

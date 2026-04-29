@@ -89,7 +89,7 @@ function GeneralSettings({ club, canManage }) {
             }
         }
         fetchProfile()
-    }, [user])
+    }, [user?.id])
 
     const handleSave = async (e) => {
         e.preventDefault()
