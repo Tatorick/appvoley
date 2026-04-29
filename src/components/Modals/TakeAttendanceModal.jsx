@@ -61,17 +61,37 @@ export default function TakeAttendanceModal({ isOpen, onClose, onSuccess, clubId
       }
       setLoading(true)
       try {
-          // Fetch players for this team
+          // Fetch players for this team using the join table
           const { data, error } = await supabase
-            .from('players')
-            .select('id, nombre_completo, posicion, numero_camiseta')
+            .from('team_assignments')
+            .select(`
+                id,
+                players!inner (
+                    id,
+                    first_name,
+                    last_name,
+                    position,
+                    jersey_number,
+                    active
+                )
+            `)
             .eq('team_id', sessionData.team_id)
-            .eq('active', true)
-            .order('nombre_completo')
+            .eq('players.active', true)
           
           if(error) throw error
           
-          setPlayers(data || [])
+          // Map to match the existing UI fields
+          const mappedPlayers = (data || [])
+              .filter(a => a.players)
+              .map(a => ({
+                  id: a.players.id,
+                  nombre_completo: `${a.players.first_name} ${a.players.last_name}`,
+                  posicion: a.players.position,
+                  numero_camiseta: a.players.jersey_number
+              }))
+              .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo))
+          
+          setPlayers(mappedPlayers)
           
           // Initialize map with 'present' by default
           const initialMap = {}
