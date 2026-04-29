@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Plus, Users, Trash2, Shield, Edit2, Lock, Loader2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import CreateTeamModal from '../../components/Modals/CreateTeamModal'
+import TeamPlayersModal from '../../components/Modals/TeamPlayersModal'
 import { useClubData } from '../../hooks/useClubData'
 
 export default function Teams() {
@@ -11,6 +12,10 @@ export default function Teams() {
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [teamToEdit, setTeamToEdit] = useState(null)
+    
+    // Players Modal State
+    const [isPlayersModalOpen, setIsPlayersModalOpen] = useState(false)
+    const [selectedTeam, setSelectedTeam] = useState(null)
 
     const canEdit = role === 'owner' || role === 'admin' || role === 'coach'
 
@@ -185,11 +190,17 @@ export default function Teams() {
                                 </span>
                             </div>
 
-                            <div className="pt-4 border-t border-slate-50 flex items-center gap-4 text-sm text-slate-500">
+                            <div className="pt-4 border-t border-slate-50 flex items-center justify-between text-sm text-slate-500">
                                 <div className="flex items-center gap-1.5">
                                     <Users size={16} />
                                     <span>{team.player_count} Jugadores</span>
                                 </div>
+                                <button 
+                                    onClick={() => { setSelectedTeam(team); setIsPlayersModalOpen(true); }}
+                                    className="text-primary hover:text-primary-dark font-medium hover:underline text-xs"
+                                >
+                                    Ver Plantilla
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -201,6 +212,13 @@ export default function Teams() {
                 onClose={handleCloseModal}
                 onTeamCreated={fetchTeams}
                 teamToEdit={teamToEdit}
+            />
+
+            <TeamPlayersModal
+                isOpen={isPlayersModalOpen}
+                onClose={() => { setIsPlayersModalOpen(false); setSelectedTeam(null); }}
+                team={selectedTeam}
+                onPlayerRemoved={fetchTeams}
             />
         </div>
     )
