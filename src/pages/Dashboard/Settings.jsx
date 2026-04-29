@@ -271,6 +271,7 @@ function StaffSettings({ club, canManage }) {
     const { user } = useAuth()
     const [members, setMembers] = useState([])
     const [invitations, setInvitations] = useState([])
+    const [requests, setRequests] = useState([])
     const [loading, setLoading] = useState(false)
     
     // Invite Form
@@ -297,12 +298,28 @@ function StaffSettings({ club, canManage }) {
         setInvitations(data || [])
     }, [club])
 
+    const fetchRequests = React.useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('club_requests')
+                .select('*, profiles(nombre_completo)')
+                .eq('club_id', club.id)
+                .eq('status', 'pending')
+            if (!error && data) {
+                setRequests(data)
+            }
+        } catch (err) {
+            // Tabla podría no existir aún, ignorar.
+        }
+    }, [club])
+
     useEffect(() => {
         if (club) {
             fetchMembers()
             fetchInvitations()
+            fetchRequests()
         }
-    }, [club, fetchMembers, fetchInvitations])
+    }, [club, fetchMembers, fetchInvitations, fetchRequests])
 
     const handleCreateInvite = async (e) => {
         e.preventDefault()
@@ -341,6 +358,36 @@ function StaffSettings({ club, canManage }) {
         const link = `${domain}/join?token=${token}`
         navigator.clipboard.writeText(link)
         alert("Enlace copiado al portapapeles: " + link)
+    }
+
+    const handleApproveRequest = async (req) => {
+        if (!canManage) return
+        setLoading(true)
+        try {
+            const { error: memberError } = await supabase.from('club_members').insert({
+                club_id: club.id,
+                profile_id: req.profile_id,
+                role_in_club: req.role_requested || 'assistant'
+            })
+            if (memberError) throw memberError
+
+            const { error: reqError } = await supabase.from('club_requests').update({ status: 'approved' }).eq('id', req.id)
+            if (reqError) throw reqError
+
+            fetchRequests()
+            fetchMembers()
+        } catch (err) {
+            console.error(err)
+            alert("Error al aprobar solicitud: " + err.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleRejectRequest = async (req) => {
+        if (!confirm("¿Seguro que deseas rechazar esta solicitud?")) return
+        await supabase.from('club_requests').update({ status: 'rejected' }).eq('id', req.id)
+        fetchRequests()
     }
 
     if (!club) return null
@@ -398,8 +445,52 @@ function StaffSettings({ club, canManage }) {
                 </div>
             </div>
 
-            {/* Right: Invitations */}
+            {/* Right: Requests and Invitations */}
             <div className="space-y-6">
+                 
+                 {/* Solicitudes de Código (New Flow) */}
+                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 relative">
+                    {!canManage && (
+                        <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-2xl">
+                            <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-100 flex items-center gap-2 text-slate-500 text-sm font-medium">
+                                <Lock size={16} /> Solo Administradores
+                            </div>
+                        </div>
+                    )}
+                    <h3 className="font-bold text-slate-900 flex items-center gap-2 mb-4">
+                        <Users size={18} className="text-amber-500"/> Solicitudes Pendientes
+                    </h3>
+                    <div className="space-y-3">
+                        {requests.length === 0 ? (
+                            <p className="text-sm text-slate-400 italic text-center py-4">No hay solicitudes de acceso.</p>
+                        ) : requests.map(req => (
+                            <div key={req.id} className="p-3 bg-amber-50/50 border border-amber-100 rounded-xl flex items-center justify-between">
+                                <div>
+                                    <p className="font-bold text-slate-800 text-sm">{req.profiles?.nombre_completo || 'Usuario Desconocido'}</p>
+                                    <p className="text-xs text-slate-500">Solicita rol: {req.role_requested === 'assistant' ? 'Asistente' : req.role_requested}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => handleApproveRequest(req)} 
+                                        disabled={loading}
+                                        className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded shadow transition-colors disabled:opacity-50"
+                                    >
+                                        Aprobar
+                                    </button>
+                                    <button 
+                                        onClick={() => handleRejectRequest(req)} 
+                                        disabled={loading}
+                                        className="px-3 py-1 bg-slate-200 hover:bg-red-500 hover:text-white text-slate-600 text-xs font-bold rounded transition-colors disabled:opacity-50"
+                                    >
+                                        X
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                 </div>
+
+                 {/* Invitaciones Link (Old Flow) */}
                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 relative">
                     {!canManage && (
                         <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">

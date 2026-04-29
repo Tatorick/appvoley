@@ -11,6 +11,7 @@ export default function AssistantRegister() {
   const [error, setError] = useState(null)
   const [clubFound, setClubFound] = useState(null)   // { id, nombre } when code is validated
   const [checkingCode, setCheckingCode] = useState(false)
+  const [requestSent, setRequestSent] = useState(false)
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -78,7 +79,7 @@ export default function AssistantRegister() {
         options: {
           data: {
             full_name: formData.fullName,
-            role: 'assistant',
+            role: 'staff',
           }
         }
       })
@@ -108,28 +109,54 @@ export default function AssistantRegister() {
         .upsert({
           id: userId,
           nombre_completo: formData.fullName.trim(),
-          rol: 'assistant',
+          rol: 'staff',
         })
       if (profileError) throw new Error('Error creando perfil: ' + profileError.message)
 
-      // 4. Add to club_members as assistant
-      const { error: memberError } = await supabase
-        .from('club_members')
+      // 4. Create join request
+      const { error: requestError } = await supabase
+        .from('club_requests')
         .insert({
           club_id: clubFound.id,
           profile_id: userId,
-          role_in_club: 'assistant',
+          role_requested: 'assistant',
+          status: 'pending'
         })
-      if (memberError) throw new Error('Error uniéndose al club: ' + memberError.message)
+      if (requestError) throw new Error('Error enviando solicitud: ' + requestError.message)
 
-      // 5. Go to dashboard
-      navigate('/app')
+      // 5. Show success message instead of navigating
+      setRequestSent(true)
     } catch (err) {
       console.error(err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (requestSent) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-200">
+            <CheckCircle2 size={32} className="text-emerald-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">¡Solicitud Enviada!</h2>
+          <p className="text-slate-500 mb-6">
+            Te has registrado correctamente. Tu solicitud para unirte al club <strong>{clubFound?.nombre}</strong> ha sido enviada al entrenador principal para su aprobación.
+          </p>
+          <p className="text-sm text-slate-400 mb-6">
+            Recibirás acceso a la plataforma una vez que tu solicitud sea aprobada.
+          </p>
+          <Link
+            to="/auth"
+            className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg transition-all font-semibold flex items-center justify-center"
+          >
+            Ir al Inicio de Sesión
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (

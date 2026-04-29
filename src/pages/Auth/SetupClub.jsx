@@ -18,6 +18,7 @@ export default function SetupClub() {
   const [error, setError] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
   const [alreadyHasClub, setAlreadyHasClub] = useState(false)
+  const [pendingRequest, setPendingRequest] = useState(null)
   const [checking, setChecking] = useState(true)
 
   const [formData, setFormData] = useState({
@@ -47,6 +48,21 @@ export default function SetupClub() {
         setAlreadyHasClub(true)
         navigate('/app', { replace: true })
       } else {
+        try {
+          // Defensive check in case the table isn't created yet
+          const { data: reqData, error: reqError } = await supabase
+            .from('club_requests')
+            .select('id, clubs(nombre)')
+            .eq('profile_id', user.id)
+            .eq('status', 'pending')
+            .limit(1)
+          
+          if (!reqError && reqData && reqData.length > 0) {
+            setPendingRequest(reqData[0])
+          }
+        } catch (e) {
+          // Table doesn't exist yet, safe to ignore
+        }
         setChecking(false)
       }
     }
@@ -155,6 +171,31 @@ export default function SetupClub() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Loader2 className="animate-spin text-primary" size={40} />
+      </div>
+    )
+  }
+
+  if (pendingRequest) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
+            <AlertCircle size={32} className="text-amber-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Solicitud en Revisión</h2>
+          <p className="text-slate-500 mb-6">
+            Tu solicitud para unirte al club <strong>{pendingRequest.clubs?.nombre || 'seleccionado'}</strong> está actualmente en estado pendiente.
+          </p>
+          <p className="text-sm text-slate-400 mb-6">
+            Contacta al entrenador principal para que apruebe tu acceso a la plataforma.
+          </p>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg transition-all font-semibold flex items-center justify-center"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
       </div>
     )
   }
