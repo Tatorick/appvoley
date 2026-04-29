@@ -299,60 +299,48 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Estado Inicial</label>
-                            <select
-                                value={formData.status}
-                                onChange={e => setFormData({ ...formData, status: e.target.value })}
-                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
-                            >
-                                <option value="planned">Planificado</option>
-                                <option value="confirmed">Confirmado</option>
-                            </select>
-                        </div>
-
-                        <div className="border-t border-slate-100 pt-4 mt-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
-                                <label className="block text-xs font-bold text-slate-400 uppercase">Estructura de Costos</label>
-                                <div className="flex bg-slate-100 rounded-lg p-0.5">
-                                    <button
-                                        type="button"
-                                        onClick={() => setCostMode('simple')}
-                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${costMode === 'simple' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                    >
-                                        Simple
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setCostMode('detailed')}
-                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors flex items-center gap-1 ${costMode === 'detailed' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                    >
-                                        <LayoutList size={12} /> Detallada
-                                    </button>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-4 mt-4">
+                            <div className="md:col-span-2">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase">Estructura de Costos</label>
+                                    <div className="flex bg-slate-100 rounded-lg p-0.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCostMode('simple')}
+                                            className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${costMode === 'simple' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            Simple
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCostMode('detailed')}
+                                            className={`px-3 py-1 text-xs font-bold rounded-md transition-colors flex items-center gap-1 ${costMode === 'detailed' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            <LayoutList size={12} /> Detallada
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {costMode === 'simple' ? (
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-3.5 text-slate-400" size={18} />
-                                    <input
-                                        type="number" step="0.01" min="0"
-                                        value={formData.cost_per_player}
-                                        onChange={e => setFormData({ ...formData, cost_per_player: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
-                                        placeholder="Costo total por jugadora"
-                                    />
-                                </div>
-                            ) : (
-                                <div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {costMode === 'simple' ? (
+                                    <div className="relative mt-2">
+                                        <DollarSign className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                                        <input
+                                            type="number" step="0.01" min="0"
+                                            value={formData.cost_per_player}
+                                            onChange={e => setFormData({ ...formData, cost_per_player: e.target.value })}
+                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
+                                            placeholder="Costo total por jugadora"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2 mt-2">
                                         {costBreakdown.map((item, idx) => (
-                                            <div key={item.id} className="flex gap-2 items-center bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
+                                            <div key={item.id} className="flex gap-2 items-center">
                                                 <input
                                                     type="text"
                                                     value={item.name}
                                                     onChange={e => setCostBreakdown(prev => prev.map(p => p.id === item.id ? { ...p, name: e.target.value } : p))}
-                                                    placeholder="Concepto"
+                                                    placeholder="Concepto (ej. Hospedaje)"
                                                     className="flex-1 p-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-yellow-500/20"
                                                 />
                                                 <div className="relative w-24 shrink-0">
@@ -374,21 +362,32 @@ export default function CreateTournamentModal({ isOpen, onClose, onSuccess, club
                                                 </button>
                                             </div>
                                         ))}
-                                    </div>
-                                    <div className="flex justify-between items-center mt-3 px-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => setCostBreakdown(prev => [...prev, { id: Math.random().toString(), name: '', amount: '' }])}
-                                            className="text-xs text-yellow-600 font-bold flex items-center gap-1 hover:text-yellow-700 bg-yellow-50 px-3 py-1.5 rounded-lg transition-colors"
-                                        >
-                                            <Plus size={14} /> Añadir Ítem
-                                        </button>
-                                        <div className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg">
-                                            Total: ${costBreakdown.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0).toFixed(2)}
+                                        <div className="flex justify-between items-center mt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCostBreakdown(prev => [...prev, { id: Math.random().toString(), name: '', amount: '' }])}
+                                                className="text-xs text-yellow-600 font-bold flex items-center gap-1 hover:text-yellow-700"
+                                            >
+                                                <Plus size={14} /> Añadir Ítem
+                                            </button>
+                                            <div className="text-sm font-bold text-slate-700">
+                                                Total: ${costBreakdown.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0).toFixed(2)}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
+                            <div className="md:col-span-1">
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Estado Inicial</label>
+                                <select
+                                    value={formData.status}
+                                    onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/20"
+                                >
+                                    <option value="planned">Planificado</option>
+                                    <option value="confirmed">Confirmado</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div>
