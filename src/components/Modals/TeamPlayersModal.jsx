@@ -83,7 +83,7 @@ export default function TeamPlayersModal({ isOpen, onClose, team, onPlayerRemove
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
             <div className="relative bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                 
                 {/* Header */}

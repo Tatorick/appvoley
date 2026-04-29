@@ -15,7 +15,6 @@ export default function WelcomeModal({ onClose }) {
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-        onClick={onClose}
       />
 
       {/* Modal */}

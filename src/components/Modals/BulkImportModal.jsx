@@ -322,7 +322,7 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={handleClose} />
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
 
       <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-200">
         {/* Header */}
