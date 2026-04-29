@@ -5,6 +5,29 @@ import AddPlayerModal from '../../components/Modals/AddPlayerModal'
 import BulkImportModal from '../../components/Modals/BulkImportModal'
 import { useNavigate } from 'react-router-dom'
 import { useClubData } from '../../hooks/useClubData'
+import { getAvatarColor, getInitials } from '../../utils/imageCompress'
+
+// ─── Avatar Component ───────────────────────────────────────────────────────
+function PlayerAvatar({ player, size = 'md' }) {
+  const sizeClass = size === 'sm' ? 'w-9 h-9 text-xs' : 'w-10 h-10 text-sm'
+  const initials = getInitials(player.first_name, player.last_name)
+  const colorClass = getAvatarColor(`${player.first_name}${player.last_name}`)
+
+  if (player.photo_url) {
+    return (
+      <img
+        src={player.photo_url}
+        alt={initials}
+        className={`${sizeClass} rounded-full object-cover border-2 border-white shadow-sm shrink-0`}
+      />
+    )
+  }
+  return (
+    <div className={`${sizeClass} ${colorClass} rounded-full flex items-center justify-center text-white font-bold border-2 border-white shadow-sm shrink-0`}>
+      {initials}
+    </div>
+  )
+}
 
 export default function Players() {
   const navigate = useNavigate()
@@ -278,7 +301,10 @@ export default function Players() {
                             {displayedPlayers.map((player) => (
                                 <tr key={player.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <div className="font-bold text-slate-900">{player.last_name} {player.first_name}</div>
+                                        <div className="flex items-center gap-3">
+                                            <PlayerAvatar player={player} />
+                                            <span className="font-bold text-slate-900">{player.last_name} {player.first_name}</span>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         {player.jersey_number ? (

@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare, X } from 'lucide-react'
+import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare, X, Camera } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import PlayerStats from '../../components/Dashboard/PlayerStats'
 import { validateId } from '../../utils/validations'
 import RegisterTransactionModal from '../../components/Modals/RegisterTransactionModal'
+import { compressImage, getAvatarColor, getInitials } from '../../utils/imageCompress'
 
 export default function PlayerDetails() {
   const { id } = useParams()
@@ -384,6 +385,9 @@ function GeneralTab({ player, assignments, refresh }) {
     const [allTeams, setAllTeams] = useState([])
     const [isAdding, setIsAdding] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
+    const [photoPreview, setPhotoPreview] = useState(player.photo_url || null)
+    const photoInputRef = useRef(null)
     
     // Edit Mode State
     const [editing, setEditing] = useState(false)
@@ -401,6 +405,54 @@ function GeneralTab({ player, assignments, refresh }) {
         legal_rep_dni: player.legal_rep_dni || '',
         legal_rep_phone: player.legal_rep_phone || ''
     })
+
+    const handlePhotoUpload = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor selecciona una imagen válida.')
+            return
+        }
+        setUploadingPhoto(true)
+        try {
+            // Compress: resize to 400px max, JPEG 75% quality (~30-60KB result)
+            const compressed = await compressImage(file, 400, 0.75)
+            const sizeMB = (compressed.size / 1024 / 1024).toFixed(2)
+            console.log(`Foto comprimida: ${(file.size / 1024).toFixed(0)}KB → ${(compressed.size / 1024).toFixed(0)}KB`)
+
+            // Upload to Supabase Storage
+            const path = `${player.club_id}/${player.id}.jpg`
+            const { error: uploadError } = await supabase.storage
+                .from('player-photos')
+                .upload(path, compressed, { upsert: true, contentType: 'image/jpeg' })
+            if (uploadError) throw uploadError
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('player-photos')
+                .getPublicUrl(path)
+
+            // Add cache-busting param so it refreshes immediately
+            const urlWithBust = `${publicUrl}?t=${Date.now()}`
+
+            // Save URL to player record
+            const { error: updateError } = await supabase
+                .from('players')
+                .update({ photo_url: publicUrl })
+                .eq('id', player.id)
+            if (updateError) throw updateError
+
+            setPhotoPreview(urlWithBust)
+            refresh()
+        } catch (err) {
+            console.error(err)
+            alert('Error al subir la foto: ' + err.message)
+        } finally {
+            setUploadingPhoto(false)
+            // Reset input so same file can be re-selected
+            if (photoInputRef.current) photoInputRef.current.value = ''
+        }
+    }
 
     // Calculate Age
     const age = player.dob ? new Date().getFullYear() - new Date(player.dob).getFullYear() : '?'
@@ -501,6 +553,51 @@ function GeneralTab({ player, assignments, refresh }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="md:col-span-2 space-y-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    {/* Player Avatar Upload */}
+                    <div className="flex items-center gap-5 mb-6 pb-6 border-b border-slate-100">
+                        <div className="relative group">
+                            {/* Avatar */}
+                            {photoPreview ? (
+                                <img
+                                    src={photoPreview}
+                                    alt="Foto"
+                                    className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md"
+                                />
+                            ) : (
+                                <div className={`w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-md ${getAvatarColor(`${player.first_name}${player.last_name}`)}`}>
+                                    {getInitials(player.first_name, player.last_name)}
+                                </div>
+                            )}
+
+                            {/* Upload overlay */}
+                            <button
+                                type="button"
+                                onClick={() => photoInputRef.current?.click()}
+                                disabled={uploadingPhoto}
+                                className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center cursor-pointer"
+                                title="Cambiar foto"
+                            >
+                                {uploadingPhoto ? (
+                                    <Loader2 size={22} className="text-white animate-spin opacity-0 group-hover:opacity-100 transition-opacity" />
+                                ) : (
+                                    <Camera size={22} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                )}
+                            </button>
+                            <input
+                                ref={photoInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handlePhotoUpload}
+                            />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900">{player.first_name} {player.last_name}</h2>
+                            <p className="text-sm text-slate-500">{player.position} • #{player.jersey_number || '?'}</p>
+                            <p className="text-xs text-slate-400 mt-1">Click en la foto para cambiarla • Auto-comprimida</p>
+                        </div>
+                    </div>
+
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-bold text-slate-900">Información Personal</h3>
                         {!editing ? (
