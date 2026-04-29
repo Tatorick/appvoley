@@ -156,25 +156,27 @@ export default function TeamPlayersModal({ isOpen, onClose, team, onPlayerRemove
                                                     </span>
                                                 ) : <span className="text-slate-400 text-xs">-</span>}
                                             </td>
-                                            <td className="px-6 py-3 text-right">
-                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleEditPlayer(player.id)}
-                                                        className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                                                        title="Editar Jugador"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleRemovePlayer(player)}
-                                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Eliminar del Equipo"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                                <div className="group-hover:hidden text-slate-300">
-                                                    <span className="text-2xl leading-none px-2">&middot;&middot;&middot;</span>
+                                            <td className="px-6 py-3 text-right w-28">
+                                                <div className="relative flex items-center justify-end h-8">
+                                                    <div className="absolute right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
+                                                        <button
+                                                            onClick={() => handleEditPlayer(player.id)}
+                                                            className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                                                            title="Editar Jugador"
+                                                        >
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleRemovePlayer(player)}
+                                                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Eliminar del Equipo"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="absolute right-0 flex items-center opacity-100 group-hover:opacity-0 transition-opacity text-slate-300">
+                                                        <span className="text-2xl leading-none px-2">&middot;&middot;&middot;</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
