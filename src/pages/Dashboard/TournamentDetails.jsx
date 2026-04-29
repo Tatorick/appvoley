@@ -53,6 +53,9 @@ export default function TournamentDetails() {
     const [filterStatus, setFilterStatus] = useState('all')
     const [filterAgeMax, setFilterAgeMax] = useState('')
 
+    // Add Player Search
+    const [availablePlayersSearch, setAvailablePlayersSearch] = useState('')
+
     // Finish Tournament Modal
     const [isFinishModalOpen, setIsFinishModalOpen] = useState(false)
     const [finishPosition, setFinishPosition] = useState('')
@@ -238,9 +241,14 @@ export default function TournamentDetails() {
     const [selectedPlayerIds, setSelectedPlayerIds] = useState([])
 
     const availablePlayers = allPlayers.filter(p => !roster.some(r => r.player_id === p.id))
-    const filteredAvailablePlayers = selectedTeamFilter === 'all'
-        ? availablePlayers
-        : availablePlayers.filter(p => p.teams?.nombre === selectedTeamFilter)
+    const filteredAvailablePlayers = availablePlayers.filter(p => {
+        if (selectedTeamFilter !== 'all' && p.teams?.nombre !== selectedTeamFilter) return false
+        if (availablePlayersSearch) {
+            const fullName = `${p.first_name} ${p.last_name}`.toLowerCase()
+            if (!fullName.includes(availablePlayersSearch.toLowerCase())) return false
+        }
+        return true
+    })
 
     // Filtered roster (search + filters)
     const getAge = (dob) => {
@@ -815,9 +823,19 @@ export default function TournamentDetails() {
                                 </div>
 
                                 {/* Filters & Actions */}
-                                <div className="flex flex-wrap gap-3 mb-4">
+                                <div className="flex flex-wrap gap-3 mb-4 items-center">
+                                    <div className="relative">
+                                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar por nombre..."
+                                            value={availablePlayersSearch}
+                                            onChange={e => setAvailablePlayersSearch(e.target.value)}
+                                            className="w-48 pl-9 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                        />
+                                    </div>
                                     <select
-                                        className="text-sm border-slate-200 rounded-lg px-3 py-2 bg-white"
+                                        className="text-sm border-slate-200 rounded-lg px-3 py-1.5 bg-white"
                                         onChange={(e) => setSelectedTeamFilter(e.target.value)}
                                     >
                                         <option value="all">Todos los Equipos</option>
