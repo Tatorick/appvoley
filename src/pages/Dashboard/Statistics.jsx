@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { BarChart3, TrendingUp, Users, Ruler, Activity, Trophy, PieChart, Plus, Calendar } from 'lucide-react'
+import { BarChart3, TrendingUp, Users, Ruler, Activity, Trophy, PieChart, Plus, Calendar, MapPin, Medal } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
 import RegisterMatchResultModal from '../../components/Modals/RegisterMatchResultModal'
@@ -10,6 +10,7 @@ export default function Statistics() {
     const [matches, setMatches] = useState([])
     const [players, setPlayers] = useState([])
     const [teams, setTeams] = useState([])
+    const [tournaments, setTournaments] = useState([])
     const [isModalOpen, setIsModalOpen] = useState(false)
 
     // const [activeTab, setActiveTab] = useState('general') // Removed unused for now
@@ -17,15 +18,21 @@ export default function Statistics() {
     const fetchData = React.useCallback(async () => {
         setLoading(true)
         try {
-            const [matchesRes, playersRes, teamsRes] = await Promise.all([
+            const [matchesRes, playersRes, teamsRes, tournamentsRes] = await Promise.all([
                 supabase.from('matches').select('*').eq('club_id', club.id).neq('status', 'canceled'),
                 supabase.from('players').select('*').eq('club_id', club.id),
-                supabase.from('teams').select('*, categories(nombre)').eq('club_id', club.id)
+                supabase.from('teams').select('*, categories(nombre)').eq('club_id', club.id),
+                supabase.from('tournaments')
+                    .select('*, tournament_roster(id)')
+                    .eq('club_id', club.id)
+                    .eq('status', 'finished')
+                    .order('start_date', { ascending: false })
             ])
 
             setMatches(matchesRes.data || [])
             setPlayers(playersRes.data || [])
             setTeams(teamsRes.data || [])
+            setTournaments(tournamentsRes.data || [])
 
         } catch (err) {
             console.error(err)

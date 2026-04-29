@@ -192,6 +192,16 @@ export default function TournamentDetails() {
         if (!player?.phone) return null
         const phone = player.phone.replace(/\D/g, '')
         const intl = phone.startsWith('593') ? phone : `593${phone.replace(/^0/, '')}`
+        let costText = `💰 Costo: $${tournament?.cost_per_player} por jugadora\n`
+        if (tournament?.cost_breakdown && tournament.cost_breakdown.length > 0) {
+            costText = `💰 Costo Total: $${tournament.cost_per_player} por jugadora\n📋 Desglose:\n`
+            tournament.cost_breakdown.forEach(item => {
+                costText += `  - ${item.name}: $${parseFloat(item.amount).toFixed(2)}\n`
+            })
+        }
+
+        const notesText = tournament?.description ? `\n📝 Notas:\n${tournament.description}\n` : ''
+
         const text = encodeURIComponent(
             `Hola ${player.first_name} 👋\n\n` +
             `Fuiste convocada para el torneo:\n` +
@@ -199,7 +209,7 @@ export default function TournamentDetails() {
             `📅 Del ${new Date(tournament?.start_date).toLocaleDateString('es-EC')} ` +
             `al ${new Date(tournament?.end_date).toLocaleDateString('es-EC')}\n` +
             `📍 ${tournament?.location}\n` +
-            `💰 Costo: $${tournament?.cost_per_player} por jugadora\n\n` +
+            costText + notesText + `\n` +
             `Por favor confirma tu participación respondiendo *SÍ* o *NO* a este mensaje.\n` +
             `¡Esperamos contar contigo! 🏐`
         )
@@ -1126,6 +1136,16 @@ export default function TournamentDetails() {
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Costo por Jugador</label>
                                 <p className="text-slate-800 font-medium">${tournament.cost_per_player}</p>
+                                {tournament.cost_breakdown && tournament.cost_breakdown.length > 0 && (
+                                    <div className="mt-2 space-y-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                        {tournament.cost_breakdown.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between text-xs">
+                                                <span className="text-slate-500">{item.name}</span>
+                                                <span className="font-medium text-slate-700">${parseFloat(item.amount).toFixed(2)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Estado</label>
