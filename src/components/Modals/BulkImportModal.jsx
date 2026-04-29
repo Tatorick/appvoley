@@ -13,14 +13,15 @@ import {
 const TEMPLATE_COLUMNS = [
   'Nombres', 'Apellidos', 'Fecha Nacimiento', 'Genero',
   'Cedula DNI', 'Telefono', 'Altura cm', 'Posicion', 'Dorsal',
-  'Equipo', 'Genero Equipo', 'Categoria'
+  'Equipo', 'Genero Equipo', 'Categoria', 
+  'Rep Legal Nombres', 'Rep Legal Apellidos', 'Rep Legal DNI', 'Rep Legal Telefono'
 ]
 
 const POSITIONS = ['Punta', 'Opuesto', 'Central', 'Armador', 'Libero', 'Universal']
 const EXAMPLE_ROWS = [
-  ['MARIA', 'PEREZ LOPEZ', '15/03/2005', 'Femenino', '1712345678', '0987654321', '172', 'Punta', '7', 'Sub 16', 'Femenino', 'Sub 16'],
-  ['ANA', 'GÓMEZ VERA', '22/09/2008', 'Femenino', '1709876543', '0991234567', '165', 'Libero', '1', 'Sub 14', 'Femenino', 'Sub 14'],
-  ['SOFIA', 'TORRES', '05/12/2002', 'Femenino', '1703456789', '', '178', 'Central', '3', 'Libre', 'Femenino', 'Libre'],
+  ['MARIA', 'PEREZ LOPEZ', '15/03/2005', 'Femenino', '1712345678', '0987654321', '172', 'Punta', '7', 'Sub 16', 'Femenino', 'Sub 16', 'ROSA', 'LOPEZ', '1700112233', '0981112222'],
+  ['ANA', 'GÓMEZ VERA', '22/09/2008', 'Femenino', '1709876543', '0991234567', '165', 'Libero', '1', 'Sub 14', 'Femenino', 'Sub 14', '', '', '', ''],
+  ['SOFIA', 'TORRES', '05/12/2002', 'Femenino', '1703456789', '', '178', 'Central', '3', 'Libre', 'Femenino', 'Libre', 'CARLOS', 'TORRES', '1799887766', '0998887777'],
 ]
 
 // ──────────────────────────────────────────────────────────
@@ -87,6 +88,10 @@ function parseRows(sheet) {
         team_name: get('equipo') || null,
         team_gender: get('genero equipo') || null,
         team_category: get('categoria') || null,
+        legal_rep_name: get('rep legal nombres') ? get('rep legal nombres').toUpperCase() : null,
+        legal_rep_surname: get('rep legal apellidos') ? get('rep legal apellidos').toUpperCase() : null,
+        legal_rep_dni: get('rep legal dni') || null,
+        legal_rep_phone: get('rep legal telefono') || null,
       }
     })
 }
@@ -108,8 +113,8 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
     const wsData = [TEMPLATE_COLUMNS, ...EXAMPLE_ROWS]
     const ws = XLSX.utils.aoa_to_sheet(wsData)
 
-    // Column widths (12 cols)
-    ws['!cols'] = [18, 20, 18, 12, 14, 13, 10, 12, 8, 14, 14, 14].map(w => ({ wch: w }))
+    // Column widths (16 cols)
+    ws['!cols'] = [18, 20, 18, 12, 14, 13, 10, 12, 8, 14, 14, 14, 20, 20, 15, 15].map(w => ({ wch: w }))
 
     XLSX.utils.book_append_sheet(wb, ws, 'Jugadoras')
     XLSX.writeFile(wb, 'plantilla_jugadoras.xlsx')
@@ -262,7 +267,11 @@ export default function BulkImportModal({ isOpen, onClose, clubId, onSuccess }) 
             height: row.height,
             position: row.position,
             jersey_number: row.jersey_number,
-            club_id: clubId
+            club_id: clubId,
+            legal_rep_name: row.legal_rep_name,
+            legal_rep_surname: row.legal_rep_surname,
+            legal_rep_dni: row.legal_rep_dni,
+            legal_rep_phone: row.legal_rep_phone
           })
           .select('id')
           .single()
