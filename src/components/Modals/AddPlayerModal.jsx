@@ -24,7 +24,12 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
         position: 'Punta', // Default
         jersey_number: '',
         // Multi-team selection
-        selectedTeams: []
+        selectedTeams: [],
+        // Legal Representative
+        legal_rep_name: '',
+        legal_rep_surname: '',
+        legal_rep_phone: '',
+        legal_rep_dni: ''
     })
 
     // Club ID storage
@@ -44,7 +49,11 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                 height: '',
                 position: 'Punta',
                 jersey_number: '',
-                selectedTeams: []
+                selectedTeams: [],
+                legal_rep_name: '',
+                legal_rep_surname: '',
+                legal_rep_phone: '',
+                legal_rep_dni: ''
             })
             setError(null)
         }
@@ -163,7 +172,11 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                     height: formData.height ? parseInt(formData.height) : null,
                     position: formData.position,
                     jersey_number: formData.jersey_number ? parseInt(formData.jersey_number) : null,
-                    club_id: clubId
+                    club_id: clubId,
+                    legal_rep_name: formData.legal_rep_name || null,
+                    legal_rep_surname: formData.legal_rep_surname || null,
+                    legal_rep_phone: formData.legal_rep_phone || null,
+                    legal_rep_dni: formData.legal_rep_dni || null
                 })
                 .select()
                 .single()
@@ -373,6 +386,55 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                                         placeholder="10"
                                         value={formData.jersey_number}
                                         onChange={e => setFormData({ ...formData, jersey_number: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Legal Representative (Optional) */}
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                Representante Legal (Opcional)
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Nombres</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                                        placeholder="Ej. María Teresa"
+                                        value={formData.legal_rep_name}
+                                        onChange={e => setFormData({ ...formData, legal_rep_name: e.target.value.toUpperCase() })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Apellidos</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                                        placeholder="Ej. López Gómez"
+                                        value={formData.legal_rep_surname}
+                                        onChange={e => setFormData({ ...formData, legal_rep_surname: e.target.value.toUpperCase() })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Cédula / DNI</label>
+                                    <input
+                                        type="text" maxLength={13}
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium font-mono"
+                                        placeholder="1700000000"
+                                        value={formData.legal_rep_dni}
+                                        onChange={e => setFormData({ ...formData, legal_rep_dni: e.target.value.replace(/\D/g, '') })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Teléfono / WhatsApp</label>
+                                    <input
+                                        type="tel"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium font-mono"
+                                        placeholder="09XXXXXXXX"
+                                        value={formData.legal_rep_phone}
+                                        onChange={e => setFormData({ ...formData, legal_rep_phone: e.target.value.replace(/\D/g, '') })}
                                     />
                                 </div>
                             </div>

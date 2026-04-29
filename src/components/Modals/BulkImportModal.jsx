@@ -47,7 +47,7 @@ function validateRow(row, index) {
   if (!row.first_name?.trim()) errors.push('Nombres requerido')
   if (!row.last_name?.trim()) errors.push('Apellidos requerido')
   if (!row.dob) errors.push('Fecha de nacimiento obligatoria y válida')
-  if (!['Femenino', 'Masculino'].includes(row.gender)) errors.push('Género debe ser Femenino o Masculino')
+  if (!row.gender || !['femenino', 'masculino'].includes(row.gender.toLowerCase())) errors.push('Género debe ser Femenino o Masculino')
   if (!row.dni) errors.push('Cédula DNI es obligatoria')
   else if (!validateId(row.dni)) errors.push('Cédula DNI inválida (dígito verificador incorrecto)')
   return errors
@@ -78,7 +78,7 @@ function parseRows(sheet) {
         first_name: get('nombres').toUpperCase(),
         last_name: get('apellidos').toUpperCase(),
         dob: parseExcelDate(dobRaw),
-        gender: get('genero'),
+        gender: get('genero') ? (get('genero').toLowerCase() === 'masculino' ? 'Masculino' : 'Femenino') : '',
         dni: get('cedula dni') || null,
         phone: get('telefono') || null,
         height: get('altura cm') ? parseInt(get('altura cm')) || null : null,

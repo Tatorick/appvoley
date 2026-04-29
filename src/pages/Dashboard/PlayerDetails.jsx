@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
+import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import PlayerStats from '../../components/Dashboard/PlayerStats'
@@ -395,7 +395,11 @@ function GeneralTab({ player, assignments, refresh }) {
         gender: player.gender,
         height: player.height || '',
         position: player.position || '',
-        phone: player.phone || ''
+        phone: player.phone || '',
+        legal_rep_name: player.legal_rep_name || '',
+        legal_rep_surname: player.legal_rep_surname || '',
+        legal_rep_dni: player.legal_rep_dni || '',
+        legal_rep_phone: player.legal_rep_phone || ''
     })
 
     // Calculate Age
@@ -432,7 +436,11 @@ function GeneralTab({ player, assignments, refresh }) {
                     gender: formData.gender,
                     height: formData.height ? parseInt(formData.height) : null,
                     position: formData.position,
-                    phone: formData.phone || null
+                    phone: formData.phone || null,
+                    legal_rep_name: formData.legal_rep_name || null,
+                    legal_rep_surname: formData.legal_rep_surname || null,
+                    legal_rep_dni: formData.legal_rep_dni || null,
+                    legal_rep_phone: formData.legal_rep_phone || null
                 })
                 .eq('id', player.id)
 
@@ -582,6 +590,27 @@ function GeneralTab({ player, assignments, refresh }) {
                                         value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})}
                                     />
                                 </div>
+                                <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Representante Legal</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-slate-400 text-xs uppercase mb-1">Nombres</label>
+                                            <input type="text" className="w-full p-2 border rounded font-medium text-slate-700" value={formData.legal_rep_name} onChange={e => setFormData({...formData, legal_rep_name: e.target.value.toUpperCase()})}/>
+                                        </div>
+                                        <div>
+                                            <label className="block text-slate-400 text-xs uppercase mb-1">Apellidos</label>
+                                            <input type="text" className="w-full p-2 border rounded font-medium text-slate-700" value={formData.legal_rep_surname} onChange={e => setFormData({...formData, legal_rep_surname: e.target.value.toUpperCase()})}/>
+                                        </div>
+                                        <div>
+                                            <label className="block text-slate-400 text-xs uppercase mb-1">Cédula / DNI</label>
+                                            <input type="text" className="w-full p-2 border rounded font-medium text-slate-700" value={formData.legal_rep_dni} onChange={e => setFormData({...formData, legal_rep_dni: e.target.value.replace(/\D/g, '')})}/>
+                                        </div>
+                                        <div>
+                                            <label className="block text-slate-400 text-xs uppercase mb-1">Teléfono</label>
+                                            <input type="tel" className="w-full p-2 border rounded font-medium text-slate-700" value={formData.legal_rep_phone} onChange={e => setFormData({...formData, legal_rep_phone: e.target.value.replace(/\D/g, '')})}/>
+                                        </div>
+                                    </div>
+                                </div>
                             </>
                         ) : (
                             <>
@@ -618,6 +647,25 @@ function GeneralTab({ player, assignments, refresh }) {
                                         ) : '-'}
                                     </span>
                                 </div>
+                                {(player.legal_rep_name || player.legal_rep_surname) && (
+                                    <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Representante Legal</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <div>
+                                                <span className="block text-slate-400 text-xs uppercase mb-1">Nombre</span>
+                                                <span className="font-medium text-slate-700">{player.legal_rep_name} {player.legal_rep_surname}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-slate-400 text-xs uppercase mb-1">Cédula / DNI</span>
+                                                <span className="font-medium text-slate-700">{player.legal_rep_dni || '-'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-slate-400 text-xs uppercase mb-1">Teléfono</span>
+                                                <span className="font-medium text-slate-700">{player.legal_rep_phone || '-'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
@@ -689,15 +737,17 @@ function MedicalTab({ playerId, medicalData, injuries, refresh }) {
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
         blood_type: medicalData?.blood_type || '',
-        allergies: medicalData?.allergies || '',
+        allergies: medicalData?.allergies ? medicalData.allergies.split(',').map(s => s.trim()).filter(s => s) : [],
         conditions: medicalData?.conditions || '',
         emergency_contact_name: medicalData?.emergency_contact_name || '',
         emergency_contact_phone: medicalData?.emergency_contact_phone || '',
         notes: medicalData?.notes || ''
     })
+    const [allergyInput, setAllergyInput] = useState('')
 
     // Injury Form
     const [showInjuryForm, setShowInjuryForm] = useState(false)
+    const [editingInjuryId, setEditingInjuryId] = useState(null)
     const [injuryData, setInjuryData] = useState({
         injury_date: new Date().toISOString().split('T')[0],
         injury_type: 'Muscular',
@@ -708,11 +758,12 @@ function MedicalTab({ playerId, medicalData, injuries, refresh }) {
     const handleSaveProfile = async () => {
         setLoading(true)
         try {
+            const dataToSave = { ...formData, allergies: formData.allergies.join(', ') }
             const { error } = await supabase
                 .from('medical_profiles')
                 .upsert({
                     player_id: playerId,
-                    ...formData,
+                    ...dataToSave,
                     updated_at: new Date()
                 }, { onConflict: 'player_id' }) // Handle UNIQUE constraint
 
@@ -731,12 +782,26 @@ function MedicalTab({ playerId, medicalData, injuries, refresh }) {
         e.preventDefault()
         setLoading(true)
         try {
-            const { error } = await supabase.from('player_injuries').insert({
-                player_id: playerId,
-                ...injuryData
-            })
+            let error
+            if (editingInjuryId) {
+                const { error: updateError } = await supabase.from('player_injuries').update({
+                    injury_date: injuryData.injury_date,
+                    injury_type: injuryData.injury_type,
+                    description: injuryData.description,
+                    status: injuryData.status
+                }).eq('id', editingInjuryId)
+                error = updateError
+            } else {
+                const { error: insertError } = await supabase.from('player_injuries').insert({
+                    player_id: playerId,
+                    ...injuryData
+                })
+                error = insertError
+            }
+
             if (error) throw error
             setShowInjuryForm(false)
+            setEditingInjuryId(null)
             setInjuryData({
                 injury_date: new Date().toISOString().split('T')[0],
                 injury_type: 'Muscular',
@@ -746,10 +811,36 @@ function MedicalTab({ playerId, medicalData, injuries, refresh }) {
             refresh()
         } catch (err) {
             console.error(err)
-            alert("Error al registrar lesión")
+            alert("Error al guardar lesión")
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleDeleteInjury = async (id) => {
+        if (!confirm('¿Seguro que deseas eliminar esta lesión?')) return
+        setLoading(true)
+        try {
+            const { error } = await supabase.from('player_injuries').delete().eq('id', id)
+            if (error) throw error
+            refresh()
+        } catch (err) {
+            console.error(err)
+            alert('Error al eliminar lesión')
+        } finally {
+            setLoading(false)
+        }
+    }
+    
+    const handleEditInjury = (injury) => {
+        setInjuryData({
+            injury_date: injury.injury_date,
+            injury_type: injury.injury_type,
+            description: injury.description || '',
+            status: injury.status
+        })
+        setEditingInjuryId(injury.id)
+        setShowInjuryForm(true)
     }
 
     return (
@@ -803,14 +894,38 @@ function MedicalTab({ playerId, medicalData, injuries, refresh }) {
                              <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Alergias</label>
                                 {editing ? (
-                                    <input 
-                                        type="text" 
-                                        className="w-full p-2 bg-slate-50 rounded border border-slate-200 text-sm"
-                                        value={formData.allergies}
-                                        onChange={e => setFormData({...formData, allergies: e.target.value})}
-                                    />
+                                    <div className="space-y-2">
+                                        <div className="flex flex-wrap gap-1">
+                                            {formData.allergies.map((allergy, index) => (
+                                                <span key={index} className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-1 rounded text-xs font-bold">
+                                                    {allergy}
+                                                    <button type="button" onClick={() => setFormData({...formData, allergies: formData.allergies.filter((_, i) => i !== index)})} className="hover:text-red-900"><X size={12}/></button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Escribe y presiona Enter"
+                                            className="w-full p-2 bg-slate-50 rounded border border-slate-200 text-sm"
+                                            value={allergyInput}
+                                            onChange={e => setAllergyInput(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    if (allergyInput.trim()) {
+                                                        setFormData({...formData, allergies: [...formData.allergies, allergyInput.trim()]})
+                                                        setAllergyInput('')
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                 ) : (
-                                    <p className="font-medium text-slate-700">{medicalData?.allergies || 'Ninguna'}</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {medicalData?.allergies ? medicalData.allergies.split(',').map((a, i) => (
+                                            <span key={i} className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-xs font-bold">{a.trim()}</span>
+                                        )) : <p className="font-medium text-slate-700">Ninguna</p>}
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -857,7 +972,16 @@ function MedicalTab({ playerId, medicalData, injuries, refresh }) {
                         <h3 className="font-bold text-slate-900 flex items-center gap-2">
                              <Activity size={20} className="text-red-500"/> Historial de Lesiones
                         </h3>
-                        <button onClick={() => setShowInjuryForm(!showInjuryForm)} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-full font-bold hover:bg-red-100 transition-colors">
+                        <button onClick={() => {
+                            setEditingInjuryId(null)
+                            setInjuryData({
+                                injury_date: new Date().toISOString().split('T')[0],
+                                injury_type: 'Muscular',
+                                description: '',
+                                status: 'Activa'
+                            })
+                            setShowInjuryForm(!showInjuryForm)
+                        }} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-full font-bold hover:bg-red-100 transition-colors">
                             <Plus size={14}/> Registrar
                         </button>
                     </div>
@@ -895,12 +1019,22 @@ function MedicalTab({ playerId, medicalData, injuries, refresh }) {
                                         <p className="text-xs text-slate-500">{injury.injury_date}</p>
                                         {injury.description && <p className="text-xs text-slate-600 mt-1">{injury.description}</p>}
                                     </div>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                                        injury.status === 'Recuperado' ? 'bg-green-100 text-green-700' : 
-                                        injury.status === 'Activa' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                                    }`}>
-                                        {injury.status}
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                            injury.status === 'Recuperado' ? 'bg-green-100 text-green-700' : 
+                                            injury.status === 'Activa' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                            {injury.status}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={() => handleEditInjury(injury)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors">
+                                                <Edit2 size={14}/>
+                                            </button>
+                                            <button onClick={() => handleDeleteInjury(injury.id)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600 transition-colors">
+                                                <Trash2 size={14}/>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
