@@ -40,7 +40,7 @@ export default function Tournaments() {
     if (!club) return <div className="p-10 text-center text-slate-400">No se encontró un club asociado a tu cuenta.</div>
 
     const activeTournaments = tournaments.filter(t => t.status === 'planned' || t.status === 'confirmed')
-    const pastTournaments = tournaments.filter(t => t.status === 'completed' || t.status === 'canceled')
+    const pastTournaments = tournaments.filter(t => t.status === 'completed' || t.status === 'finished' || t.status === 'canceled')
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -93,7 +93,7 @@ export default function Tournaments() {
                                 className={`p-4 hover:bg-slate-50 cursor-pointer flex items-center justify-between group ${i !== pastTournaments.length - 1 ? 'border-b border-slate-50' : ''}`}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-2 h-10 rounded-full ${t.status === 'completed' ? 'bg-slate-300' : 'bg-red-200'}`}></div>
+                                    <div className={`w-2 h-10 rounded-full ${t.status === 'completed' || t.status === 'finished' ? 'bg-slate-300' : 'bg-red-200'}`}></div>
                                     <div>
                                         <h3 className="font-bold text-slate-700 group-hover:text-primary transition-colors">{t.name}</h3>
                                         <p className="text-xs text-slate-400 flex items-center gap-2">
@@ -123,6 +123,7 @@ function TournamentCard({ tournament, onClick }) {
         'planned': 'bg-blue-100 text-blue-700',
         'confirmed': 'bg-green-100 text-green-700',
         'completed': 'bg-slate-100 text-slate-600',
+        'finished': 'bg-purple-100 text-purple-700',
         'canceled': 'bg-red-100 text-red-600'
     }
 
@@ -130,6 +131,7 @@ function TournamentCard({ tournament, onClick }) {
         'planned': 'Planificado',
         'confirmed': 'Confirmado',
         'completed': 'Finalizado',
+        'finished': 'Finalizado',
         'canceled': 'Cancelado'
     }
 
