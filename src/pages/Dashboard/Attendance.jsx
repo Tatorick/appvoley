@@ -10,7 +10,7 @@ export default function Attendance() {
     const [sessions, setSessions] = useState([])
     const [isModalOpen, setIsModalOpen] = useState(false)
 
-    const canManage = role === 'owner' || role === 'admin' || role === 'coach'
+    const canManage = role === 'owner' || role === 'admin' || role === 'coach' || role === 'assistant'
 
     const fetchSessions = React.useCallback(async () => {
         setLoading(true)

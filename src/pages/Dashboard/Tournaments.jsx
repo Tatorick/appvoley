@@ -12,7 +12,7 @@ export default function Tournaments() {
     const [tournaments, setTournaments] = useState([])
     const [isModalOpen, setIsModalOpen] = useState(false)
 
-    const canManage = role === 'owner' || role === 'admin' || role === 'coach'
+    const canManage = role === 'owner' || role === 'admin' || role === 'coach' || role === 'assistant'
 
     const fetchTournaments = React.useCallback(async () => {
         setLoading(true)

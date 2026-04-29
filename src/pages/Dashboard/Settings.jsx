@@ -390,6 +390,18 @@ function StaffSettings({ club, canManage }) {
         fetchRequests()
     }
 
+    const handleRevokeMember = async (memberId, memberName) => {
+        if (!canManage) return
+        if (!confirm(`¿Revocar el acceso de ${memberName}? Esto eliminará su acceso al club inmediatamente.`)) return
+        try {
+            const { error } = await supabase.from('club_members').delete().eq('id', memberId)
+            if (error) throw error
+            fetchMembers()
+        } catch (err) {
+            alert('Error al revocar acceso: ' + err.message)
+        }
+    }
+
     if (!club) return null
 
     return (
@@ -421,24 +433,33 @@ function StaffSettings({ club, canManage }) {
                         </div>
 
                         {members.map(m => (
-                             <div key={m.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                             <div key={m.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">
                                         {m.profiles?.nombre_completo?.[0] || 'U'}
                                     </div>
                                     <div>
                                         <p className="font-bold text-slate-800 text-sm">{m.profiles?.nombre_completo}</p>
-                                        {/* Email might not be in profile, maybe show role only */}
-                                        <p className="text-xs text-slate-500 capitalize">{m.rol || m.role}</p>
+                                        <p className="text-xs text-slate-500 capitalize">{m.role_in_club || m.rol || m.role}</p>
                                     </div>
                                 </div>
-                                <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${
-                                    (m.role || m.rol) === 'admin' ? 'bg-purple-100 text-purple-700' : 
-                                    (m.role || m.rol) === 'coach' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
-                                }`}>
-                                    {/* Handle older 'rol' or 'role' just in case */}
-                                    {m.role || m.rol || 'assistant'}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${
+                                        (m.role_in_club || m.role || m.rol) === 'admin' ? 'bg-purple-100 text-purple-700' : 
+                                        (m.role_in_club || m.role || m.rol) === 'coach' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                                    }`}>
+                                        {(m.role_in_club || m.role || m.rol) === 'assistant' ? 'Asistente' : (m.role_in_club || m.role || m.rol)}
+                                    </span>
+                                    {canManage && (
+                                        <button
+                                            onClick={() => handleRevokeMember(m.id, m.profiles?.nombre_completo || 'este miembro')}
+                                            title="Revocar acceso"
+                                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>

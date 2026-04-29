@@ -17,7 +17,7 @@ export default function Teams() {
     const [isPlayersModalOpen, setIsPlayersModalOpen] = useState(false)
     const [selectedTeam, setSelectedTeam] = useState(null)
 
-    const canEdit = role === 'owner' || role === 'admin' || role === 'coach'
+    const canEdit = role === 'owner' || role === 'admin' || role === 'coach' || role === 'assistant'
 
     const fetchTeams = async () => {
         if (!club) return

@@ -26,7 +26,7 @@ export default function Players() {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
 
   // Permissions
-  const canEdit = role === 'owner' || role === 'admin' || role === 'coach'
+  const canEdit = role === 'owner' || role === 'admin' || role === 'coach' || role === 'assistant'
 
   // Fetch logic
   // Wrapped in useCallback to be stable for useEffect and child modal
