@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Settings, Loader2, Save, Plus, Trash2, CheckCircle, XCircle, AlertCircle, MessageCircle, UserPlus, CalendarDays, Swords, Clock, Flag, ChevronDown, ChevronUp, Edit2 } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Settings, Loader2, Save, Plus, Trash2, CheckCircle, XCircle, AlertCircle, MessageCircle, UserPlus, CalendarDays, Swords, Clock, Flag, ChevronDown, ChevronUp, Edit2, RotateCcw, Trophy, Search, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
 import TournamentPaymentModal from '../../components/Modals/TournamentPaymentModal'
@@ -46,6 +46,18 @@ export default function TournamentDetails() {
 
     // General Tab Edit
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+
+    // Roster Search & Filters
+    const [rosterSearch, setRosterSearch] = useState('')
+    const [filterPosition, setFilterPosition] = useState('all')
+    const [filterStatus, setFilterStatus] = useState('all')
+    const [filterAgeMax, setFilterAgeMax] = useState('')
+
+    // Finish Tournament Modal
+    const [isFinishModalOpen, setIsFinishModalOpen] = useState(false)
+    const [finishPosition, setFinishPosition] = useState('')
+    const [finishNotes, setFinishNotes] = useState('')
+    const [savingFinish, setSavingFinish] = useState(false)
 
     const canManage = role === 'owner' || role === 'admin' || role === 'coach'
 
@@ -193,9 +205,33 @@ export default function TournamentDetails() {
 
     // Auto-add newly created player to tournament roster
     const handleNewPlayerCreated = async () => {
-        // After refresh, find the newest player not yet in roster
         await fetchTournamentDetails()
         setIsNewPlayerModalOpen(false)
+    }
+
+    // --- Finish Tournament ---
+    const handleFinishTournament = async () => {
+        if (!finishPosition) { alert('Por favor selecciona la posición final.'); return }
+        setSavingFinish(true)
+        try {
+            const { error } = await supabase
+                .from('tournaments')
+                .update({
+                    status: 'finished',
+                    final_position: parseInt(finishPosition),
+                    final_notes: finishNotes.trim() || null
+                })
+                .eq('id', id)
+            if (error) throw error
+            setTournament(prev => ({ ...prev, status: 'finished', final_position: parseInt(finishPosition), final_notes: finishNotes.trim() || null }))
+            setIsFinishModalOpen(false)
+            setFinishPosition('')
+            setFinishNotes('')
+        } catch (err) {
+            alert('Error al finalizar torneo: ' + err.message)
+        } finally {
+            setSavingFinish(false)
+        }
     }
     // --- Roster Logic ---
     const [selectedTeamFilter, setSelectedTeamFilter] = useState('all')
@@ -205,6 +241,24 @@ export default function TournamentDetails() {
     const filteredAvailablePlayers = selectedTeamFilter === 'all'
         ? availablePlayers
         : availablePlayers.filter(p => p.teams?.nombre === selectedTeamFilter)
+
+    // Filtered roster (search + filters)
+    const getAge = (dob) => {
+        if (!dob) return null
+        const diff = Date.now() - new Date(dob).getTime()
+        return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25))
+    }
+    const filteredRoster = roster.filter(r => {
+        const fullName = `${r.players.first_name} ${r.players.last_name}`.toLowerCase()
+        if (rosterSearch && !fullName.includes(rosterSearch.toLowerCase())) return false
+        if (filterPosition !== 'all' && r.players.position !== filterPosition) return false
+        if (filterStatus !== 'all' && r.status !== filterStatus) return false
+        if (filterAgeMax) {
+            const age = getAge(r.players.dob)
+            if (age !== null && age > parseInt(filterAgeMax)) return false
+        }
+        return true
+    })
 
     const togglePlayerSelection = (playerId) => {
         setSelectedPlayerIds(prev =>
@@ -380,10 +434,25 @@ export default function TournamentDetails() {
                         <Calendar size={14} /> {new Date(tournament.start_date).toLocaleDateString()}
                     </p>
                 </div>
-                <div className="ml-auto">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${tournament.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                        }`}>
-                        {tournament.status === 'confirmed' ? 'Confirmado' : 'Planificado'}
+                <div className="ml-auto flex items-center gap-3">
+                    {canManage && tournament.status !== 'finished' && (
+                        <button
+                            onClick={() => setIsFinishModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                        >
+                            <Trophy size={15} /> Finalizar Torneo
+                        </button>
+                    )}
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                        tournament.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                        tournament.status === 'finished'  ? 'bg-purple-100 text-purple-700' :
+                        tournament.status === 'canceled'  ? 'bg-red-100 text-red-600' :
+                        'bg-blue-100 text-blue-700'
+                    }`}>
+                        {tournament.status === 'confirmed' ? 'Confirmado' :
+                         tournament.status === 'finished'  ? `🏆 Finalizado${tournament.final_position ? ` · ${tournament.final_position}° lugar` : ''}` :
+                         tournament.status === 'canceled'  ? 'Cancelado' :
+                         'Planificado'}
                     </span>
                 </div>
             </div>
@@ -654,6 +723,69 @@ export default function TournamentDetails() {
                             </div>
                         )}
 
+                        {/* Search & Filters */}
+                        {roster.length > 0 && (
+                            <div className="bg-white border border-slate-100 rounded-xl p-3 space-y-3 shadow-sm">
+                                {/* Search */}
+                                <div className="relative">
+                                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar jugadora por nombre..."
+                                        value={rosterSearch}
+                                        onChange={e => setRosterSearch(e.target.value)}
+                                        className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50"
+                                    />
+                                </div>
+                                {/* Filters */}
+                                <div className="flex flex-wrap gap-2 items-center">
+                                    <SlidersHorizontal size={13} className="text-slate-400 shrink-0" />
+                                    <select
+                                        value={filterPosition}
+                                        onChange={e => setFilterPosition(e.target.value)}
+                                        className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 outline-none focus:ring-2 focus:ring-primary/20"
+                                    >
+                                        <option value="all">Todas las posiciones</option>
+                                        {['Punta','Opuesto','Central','Armador','Libero','Universal'].map(p => (
+                                            <option key={p} value={p}>{p}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={filterStatus}
+                                        onChange={e => setFilterStatus(e.target.value)}
+                                        className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 outline-none focus:ring-2 focus:ring-primary/20"
+                                    >
+                                        <option value="all">Todos los estados</option>
+                                        <option value="pending">Pendiente</option>
+                                        <option value="confirmed">Confirmada</option>
+                                        <option value="declined">No viaja</option>
+                                    </select>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-xs text-slate-400">Edad máx:</span>
+                                        <input
+                                            type="number"
+                                            min="10" max="60"
+                                            placeholder="—"
+                                            value={filterAgeMax}
+                                            onChange={e => setFilterAgeMax(e.target.value)}
+                                            className="w-16 text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 outline-none focus:ring-2 focus:ring-primary/20"
+                                        />
+                                    </div>
+                                    {(rosterSearch || filterPosition !== 'all' || filterStatus !== 'all' || filterAgeMax) && (
+                                        <button
+                                            onClick={() => { setRosterSearch(''); setFilterPosition('all'); setFilterStatus('all'); setFilterAgeMax('') }}
+                                            className="text-xs text-primary hover:underline ml-auto"
+                                        >
+                                            Limpiar filtros
+                                        </button>
+                                    )}
+                                </div>
+                                {filteredRoster.length !== roster.length && (
+                                    <p className="text-xs text-slate-400">Mostrando {filteredRoster.length} de {roster.length} jugadoras</p>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex flex-wrap justify-between items-center gap-2">
                             <h3 className="font-bold text-slate-700">Lista de Convocadas</h3>
                             {canManage && (
@@ -752,7 +884,7 @@ export default function TournamentDetails() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {roster.map(r => {
+                                    {filteredRoster.map(r => {
                                         const waLink = buildWALink(r.players)
                                         return (
                                         <tr key={r.id} className={`transition-colors ${
@@ -792,6 +924,16 @@ export default function TournamentDetails() {
                                                                 <MessageCircle size={15} />
                                                             </a>
                                                         )}
+                                                        {/* Unconfirm button — revert confirmed to pending */}
+                                                        {r.status === 'confirmed' && (
+                                                            <button
+                                                                onClick={() => handleUpdateStatus(r.id, 'pending')}
+                                                                title="Volver a pendiente"
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 transition-colors"
+                                                            >
+                                                                <RotateCcw size={14} />
+                                                            </button>
+                                                        )}
                                                         {/* Confirm button */}
                                                         {r.status !== 'confirmed' && (
                                                             <button
@@ -826,10 +968,10 @@ export default function TournamentDetails() {
                                         </tr>
                                         )
                                     })}
-                                    {roster.length === 0 && (
+                                    {filteredRoster.length === 0 && (
                                         <tr>
                                             <td colSpan="4" className="px-6 py-8 text-center text-slate-400 italic">
-                                                No hay jugadoras convocadas aún.
+                                                {roster.length === 0 ? 'No hay jugadoras convocadas aún.' : 'Ninguna jugadora coincide con los filtros.'}
                                             </td>
                                         </tr>
                                     )}
@@ -1003,6 +1145,75 @@ export default function TournamentDetails() {
                 clubId={club?.id}
                 tournamentToEdit={tournament}
             />
+            {/* Modal Finalizar Torneo */}
+            {isFinishModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md animate-in zoom-in-95">
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                                <Trophy size={20} className="text-amber-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800">Finalizar Torneo</h3>
+                                <p className="text-xs text-slate-400">{tournament.name}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">
+                                    ¿En qué posición quedó el equipo? *
+                                </label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {[1,2,3,4,5,6,7,8].map(pos => (
+                                        <button
+                                            key={pos}
+                                            onClick={() => setFinishPosition(String(pos))}
+                                            className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
+                                                finishPosition === String(pos)
+                                                    ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                                    : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            {pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : `${pos}°`}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">
+                                    Notas del torneo (opcional)
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    value={finishNotes}
+                                    onChange={e => setFinishNotes(e.target.value)}
+                                    placeholder="Ej: Gran actuación del equipo, llegamos a la final..."
+                                    className="w-full p-3 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-400/30 resize-none bg-slate-50"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => { setIsFinishModalOpen(false); setFinishPosition(''); setFinishNotes('') }}
+                                className="flex-1 py-2.5 text-slate-500 font-medium bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleFinishTournament}
+                                disabled={savingFinish || !finishPosition}
+                                className="flex-1 py-2.5 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {savingFinish ? <Loader2 size={16} className="animate-spin" /> : <Trophy size={16} />}
+                                {savingFinish ? 'Guardando...' : 'Finalizar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

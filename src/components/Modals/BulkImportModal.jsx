@@ -82,7 +82,7 @@ function parseRows(sheet) {
         dni: get('cedula dni') || null,
         phone: get('telefono') || null,
         height: get('altura cm') ? parseInt(get('altura cm')) || null : null,
-        position: POSITIONS.includes(get('posicion')) ? get('posicion') : null,
+        position: POSITIONS.find(p => p.toLowerCase() === get('posicion').toLowerCase()) || null,
         jersey_number: get('dorsal') ? parseInt(get('dorsal')) || null : null,
         team_name: get('equipo') || null,
         team_gender: get('genero equipo') || null,
