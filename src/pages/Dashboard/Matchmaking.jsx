@@ -26,7 +26,7 @@ export default function Matchmaking() {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
   const [selectedPost, setSelectedPost] = useState(null)
 
-  const canCreate = !!club && (role === 'owner' || role === 'admin' || role === 'coach')
+  const canCreate = !!club && (role === 'owner' || role === 'admin' || role === 'coach' || role === 'assistant')
 
   // ── Fetch posts ──────────────────────────────────────────────────────────────
   const fetchPosts = async () => {
