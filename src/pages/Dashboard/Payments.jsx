@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Search, CheckCircle, Loader2, Filter, ChevronRight, ExternalLink, AlertCircle } from 'lucide-react'
+import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Search, CheckCircle, Loader2, Filter, ChevronRight, AlertCircle, Trash2, ClipboardList, User } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
 import { useNavigate } from 'react-router-dom'
 import RegisterTransactionModal from '../../components/Modals/RegisterTransactionModal'
+import DeletePaymentModal from '../../components/Modals/DeletePaymentModal'
 
 export default function Payments() {
   const { club, role } = useClubData()
@@ -26,11 +27,18 @@ export default function Payments() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  // Modal
+  // Register modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [preselectedPlayer, setPreselectedPlayer] = useState(null)
   const [modalTargetMonth, setModalTargetMonth] = useState(null)
-  const [modalCategory, setModalCategory] = useState(null) // New
+  const [modalCategory, setModalCategory] = useState(null)
+
+  // Delete modal
+  const [deletingMovement, setDeletingMovement] = useState(null)
+
+  // Audit log
+  const [auditLog, setAuditLog] = useState([])
+  const [auditLoading, setAuditLoading] = useState(false)
 
   const canEdit = role === 'owner' || role === 'admin'
   const isAssistant = role === 'assistant'
@@ -43,6 +51,7 @@ export default function Payments() {
             .from('treasury_movements')
             .select('*')
             .eq('club_id', club.id)
+            .is('deleted_at', null)
             .order('date', { ascending: false })
             .order('created_at', { ascending: false })
         
@@ -93,12 +102,37 @@ export default function Payments() {
       }
   }, [club])
 
+  const fetchAuditLog = useCallback(async () => {
+    if (!club) return
+    setAuditLoading(true)
+    try {
+      const { data } = await supabase
+        .from('payment_audit_log')
+        .select(`
+          *,
+          profiles:performed_by ( nombre_completo )
+        `)
+        .eq('club_id', club.id)
+        .order('performed_at', { ascending: false })
+        .limit(200)
+      setAuditLog(data || [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setAuditLoading(false)
+    }
+  }, [club])
+
   useEffect(() => {
     if (club) {
         fetchMovements()
         fetchPlayers()
     }
   }, [club, fetchMovements, fetchPlayers])
+
+  useEffect(() => {
+    if (club && activeTab === 'auditoria') fetchAuditLog()
+  }, [club, activeTab, fetchAuditLog])
 
   // Helper: Calculate Debt for Current Year
   const calculateDebt = (playerId) => {
@@ -298,7 +332,7 @@ export default function Payments() {
 
       {/* Tabs Navigation */}
        <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
-            {['treasury', 'fees', 'matriculas', 'uniforms'].map(tab => (
+            {['treasury', 'fees', 'matriculas', 'uniforms', 'auditoria'].map(tab => (
                 <button 
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -308,6 +342,7 @@ export default function Payments() {
                     {tab === 'fees' && <><Calendar size={18} /> Cuotas Mensuales</>}
                     {tab === 'matriculas' && <><CheckCircle size={18} /> Matrículas</>}
                     {tab === 'uniforms' && <><Filter size={18} /> Uniformes</>}
+                    {tab === 'auditoria' && <><ClipboardList size={18} /> Auditoría</>}
                 </button>
             ))}
        </div>
@@ -328,11 +363,12 @@ export default function Payments() {
                                <th className="px-6 py-4">Descripción</th>
                                <th className="px-6 py-4">Categoría</th>
                                <th className="px-6 py-4 text-right">Monto</th>
+                               {canEdit && <th className="px-4 py-4"></th>}
                            </tr>
                        </thead>
                        <tbody className="divide-y divide-slate-50">
                            {movements.map(m => (
-                               <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                               <tr key={m.id} className="hover:bg-slate-50 transition-colors group">
                                    <td className="px-6 py-4 text-slate-500 text-sm font-medium">{new Date(m.date).toLocaleDateString()}</td>
                                    <td className="px-6 py-4">
                                        <div className="font-bold text-slate-700">{m.description}</div>
@@ -344,12 +380,95 @@ export default function Payments() {
                                    <td className={`px-6 py-4 text-right font-mono font-bold ${m.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
                                        {m.type === 'income' ? '+' : '-'}${Number(m.amount).toFixed(2)}
                                    </td>
+                                   {canEdit && (
+                                     <td className="px-4 py-4 text-right">
+                                       <button
+                                         onClick={() => setDeletingMovement(m)}
+                                         title="Eliminar movimiento"
+                                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
+                                       >
+                                         <Trash2 size={15} />
+                                       </button>
+                                     </td>
+                                   )}
                                </tr>
                            ))}
                        </tbody>
                    </table>
                 </div>
                )}
+           </div>
+
+       ) : activeTab === 'auditoria' ? (
+           /* AUDIT LOG */
+           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+             <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+               <ClipboardList size={18} className="text-slate-500" />
+               <h3 className="font-bold text-slate-800">Historial de Auditoría</h3>
+               <span className="ml-auto text-xs text-slate-400">Últimas 200 acciones</span>
+             </div>
+             {auditLoading ? (
+               <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-primary" size={32}/></div>
+             ) : auditLog.length === 0 ? (
+               <div className="p-10 text-center text-slate-400 italic">No hay registros de auditoría aún.</div>
+             ) : (
+               <div className="divide-y divide-slate-50">
+                 {auditLog.map(entry => {
+                   const isDelete = entry.action === 'deleted'
+                   const snap = entry.snapshot || {}
+                   const when = new Date(entry.performed_at).toLocaleString('es-ES', {
+                     day: '2-digit', month: 'short', year: 'numeric',
+                     hour: '2-digit', minute: '2-digit'
+                   })
+                   return (
+                     <div key={entry.id} className="flex items-start gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
+                       {/* Action icon */}
+                       <div className={`mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                         isDelete ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                       }`}>
+                         {isDelete ? <Trash2 size={15} /> : <Plus size={15} />}
+                       </div>
+                       {/* Details */}
+                       <div className="flex-1 min-w-0">
+                         <div className="flex flex-wrap items-center gap-2">
+                           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                             isDelete ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                           }`}>
+                             {isDelete ? 'ELIMINADO' : 'REGISTRADO'}
+                           </span>
+                           <span className="text-sm font-semibold text-slate-800 truncate">
+                             {snap.description || '—'}
+                           </span>
+                           <span className={`text-sm font-mono font-bold ${
+                             snap.type === 'income' ? 'text-green-600' : 'text-red-500'
+                           }`}>
+                             {snap.type === 'income' ? '+' : '-'}${Number(snap.amount || 0).toFixed(2)}
+                           </span>
+                           {snap.category && (
+                             <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">
+                               {snap.category}
+                             </span>
+                           )}
+                         </div>
+                         {entry.notes && (
+                           <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1 italic">
+                             Motivo: {entry.notes}
+                           </p>
+                         )}
+                         <div className="flex items-center gap-2 mt-1.5">
+                           <User size={11} className="text-slate-400" />
+                           <span className="text-xs text-slate-500">
+                             {entry.profiles?.nombre_completo || 'Usuario desconocido'}
+                           </span>
+                           <span className="text-slate-300">•</span>
+                           <span className="text-xs text-slate-400">{when}</span>
+                         </div>
+                       </div>
+                     </div>
+                   )
+                 })}
+               </div>
+             )}
            </div>
 
        ) : (
@@ -471,7 +590,18 @@ export default function Payments() {
                                                 {/* ACTION BUTTONS */}
                                                 {activeTab === 'fees' && (
                                                     player.paid ? (
-                                                        <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full whitespace-nowrap"><CheckCircle size={10} className="inline mr-1"/>PAGADO</span>
+                                                        <div className="flex items-center gap-1">
+                                                          <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full whitespace-nowrap"><CheckCircle size={10} className="inline mr-1"/>PAGADO</span>
+                                                          {canEdit && (
+                                                            <button
+                                                              onClick={() => setDeletingMovement(player.paymentDetails)}
+                                                              title="Eliminar pago"
+                                                              className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                                            >
+                                                              <Trash2 size={12} />
+                                                            </button>
+                                                          )}
+                                                        </div>
                                                     ) : (
                                                         canEdit && <button onClick={() => handleRegisterFee(player)} className="text-[10px] bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-primary font-bold whitespace-nowrap">Registrar</button>
                                                     )
@@ -479,7 +609,18 @@ export default function Payments() {
 
                                                 {activeTab === 'matriculas' && (
                                                     player.paid ? (
-                                                        <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full whitespace-nowrap"><CheckCircle size={10} className="inline mr-1"/>OK {selectedYear}</span>
+                                                        <div className="flex items-center gap-1">
+                                                          <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full whitespace-nowrap"><CheckCircle size={10} className="inline mr-1"/>OK {selectedYear}</span>
+                                                          {canEdit && (
+                                                            <button
+                                                              onClick={() => setDeletingMovement(player.paymentDetails)}
+                                                              title="Eliminar pago"
+                                                              className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                                            >
+                                                              <Trash2 size={12} />
+                                                            </button>
+                                                          )}
+                                                        </div>
                                                     ) : (
                                                         canEdit && <button onClick={() => handleRegisterMatricula(player)} className="text-[10px] bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-primary font-bold whitespace-nowrap">Cobrar</button>
                                                     )
@@ -509,6 +650,16 @@ export default function Payments() {
             preselectedPlayer={preselectedPlayer}
             preselectedMonth={modalTargetMonth}
             preselectedCategory={modalCategory}
+       />
+
+       <DeletePaymentModal
+            movement={deletingMovement}
+            onClose={() => setDeletingMovement(null)}
+            onSuccess={() => {
+              setDeletingMovement(null)
+              fetchMovements()
+              if (activeTab === 'auditoria') fetchAuditLog()
+            }}
        />
      </div>
     )
