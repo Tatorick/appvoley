@@ -80,6 +80,11 @@ function GeneralSettings({ club, canManage }) {
     const [saving, setSaving] = useState(false)
     const [fetchingProfile, setFetchingProfile] = useState(true)
 
+    // Logo Upload State
+    const logoInputRef = useRef(null)
+    const [logoPreview, setLogoPreview] = useState(club.logo_url || null)
+    const [uploadingLogo, setUploadingLogo] = useState(false)
+
     useEffect(() => {
         async function fetchProfile() {
             if (!user) return
@@ -137,6 +142,44 @@ function GeneralSettings({ club, canManage }) {
         }
     }
 
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (!file.type.startsWith('image/')) { alert('Por favor selecciona una imagen válida.'); return }
+        setUploadingLogo(true)
+        try {
+            const compressed = await compressImage(file, 400, 0.9) // 400px max width for logo
+            const path = `clubs/${club.id}/logo.png`
+            const { error: uploadError } = await supabase.storage
+                .from('club-assets')
+                .upload(path, compressed, { upsert: true, contentType: 'image/png' })
+            if (uploadError) throw uploadError
+            
+            const { data: { publicUrl } } = supabase.storage.from('club-assets').getPublicUrl(path)
+            const urlWithBust = `${publicUrl}?t=${Date.now()}`
+            
+            // Save to DB
+            const { error: dbError } = await supabase.from('clubs').update({ logo_url: publicUrl }).eq('id', club.id)
+            if (dbError) throw dbError
+            
+            setLogoPreview(urlWithBust)
+        } catch (err) {
+            alert('Error al subir el logo: ' + err.message)
+            console.error(err)
+        } finally {
+            setUploadingLogo(false)
+            if (logoInputRef.current) logoInputRef.current.value = ''
+        }
+    }
+
+    const handleRemoveLogo = async () => {
+        if (!confirm('¿Eliminar el logo del club?')) return
+        try {
+            await supabase.from('clubs').update({ logo_url: null }).eq('id', club.id)
+            setLogoPreview(null)
+        } catch (err) { alert('Error al eliminar logo: ' + err.message) }
+    }
+
     if (fetchingProfile) {
         return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-primary" size={32}/></div>
     }
@@ -152,7 +195,57 @@ function GeneralSettings({ club, canManage }) {
                 {/* Datos del Club */}
                 <div>
                     <h3 className="font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Datos del Club</h3>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
+                        
+                        {/* Club Logo Upload */}
+                        <div className="flex items-center gap-6">
+                            <div className="shrink-0 relative">
+                                {logoPreview ? (
+                                    <div className="w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-slate-50 flex items-center justify-center">
+                                        <img src={logoPreview} alt="Logo del club" className="w-full h-full object-cover" />
+                                    </div>
+                                ) : (
+                                    <div className="w-24 h-24 rounded-full border-4 border-white shadow-md bg-slate-100 flex items-center justify-center text-slate-300">
+                                        <Shield size={40} />
+                                    </div>
+                                )}
+                                {canManage && (
+                                    <div className="absolute -bottom-2 -right-2 flex gap-1">
+                                        <button 
+                                            type="button"
+                                            onClick={() => logoInputRef.current?.click()}
+                                            disabled={uploadingLogo}
+                                            className="bg-primary text-white p-2 rounded-full shadow hover:bg-primary-dark transition-colors disabled:opacity-50"
+                                            title="Cambiar logo"
+                                        >
+                                            {uploadingLogo ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                                        </button>
+                                        {logoPreview && (
+                                            <button 
+                                                type="button"
+                                                onClick={handleRemoveLogo}
+                                                className="bg-red-500 text-white p-2 rounded-full shadow hover:bg-red-600 transition-colors"
+                                                title="Eliminar logo"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-800">Logo del Club</h4>
+                                <p className="text-xs text-slate-500 mb-1">Se recomienda una imagen cuadrada (PNG o JPG).</p>
+                                <input 
+                                    ref={logoInputRef}
+                                    type="file" 
+                                    accept="image/*" 
+                                    className="hidden" 
+                                    onChange={handleLogoUpload}
+                                />
+                            </div>
+                        </div>
+
                         <div>
                              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre del Club</label>
                              <input 
