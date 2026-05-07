@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare, X, Camera } from 'lucide-react'
+import { ArrowLeft, Save, Activity, FileText, User, Loader2, Plus, Trash2, TrendingUp, Edit2, DollarSign, Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare, X, Camera, Award, School } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useClubData } from '../../hooks/useClubData'
 import PlayerStats from '../../components/Dashboard/PlayerStats'
 import { validateId } from '../../utils/validations'
 import RegisterTransactionModal from '../../components/Modals/RegisterTransactionModal'
 import { compressImage, getAvatarColor, getInitials } from '../../utils/imageCompress'
+import MembershipCertificateModal from '../../components/Modals/MembershipCertificateModal'
 
 export default function PlayerDetails() {
   const { id } = useParams()
@@ -403,8 +405,17 @@ function GeneralTab({ player, assignments, refresh }) {
         legal_rep_name: player.legal_rep_name || '',
         legal_rep_surname: player.legal_rep_surname || '',
         legal_rep_dni: player.legal_rep_dni || '',
-        legal_rep_phone: player.legal_rep_phone || ''
+        legal_rep_phone: player.legal_rep_phone || '',
+        // Education for certificates
+        school_name: player.school_name || '',
+        school_principal: player.school_principal || '',
+        school_principal_title: player.school_principal_title || 'Lic.',
+        school_grade: player.school_grade || ''
     })
+
+    // Membership certificate modal
+    const [membershipCertOpen, setMembershipCertOpen] = useState(false)
+    const { club } = useClubData()
 
     const handlePhotoUpload = async (e) => {
         const file = e.target.files?.[0]
@@ -492,7 +503,11 @@ function GeneralTab({ player, assignments, refresh }) {
                     legal_rep_name: formData.legal_rep_name || null,
                     legal_rep_surname: formData.legal_rep_surname || null,
                     legal_rep_dni: formData.legal_rep_dni || null,
-                    legal_rep_phone: formData.legal_rep_phone || null
+                    legal_rep_phone: formData.legal_rep_phone || null,
+                    school_name: formData.school_name || null,
+                    school_principal: formData.school_principal || null,
+                    school_principal_title: formData.school_principal_title || 'Lic.',
+                    school_grade: formData.school_grade || null
                 })
                 .eq('id', player.id)
 
@@ -708,6 +723,39 @@ function GeneralTab({ player, assignments, refresh }) {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Education - Edit Mode */}
+                                <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                                    <h4 className="text-xs font-bold text-blue-400 uppercase mb-3 flex items-center gap-1.5">
+                                        <School size={13} /> Institución Educativa
+                                        <span className="text-[10px] font-normal normal-case bg-blue-50 text-blue-400 px-1.5 py-0.5 rounded-full ml-1">Para certificados</span>
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-slate-400 text-xs uppercase mb-1">Nombre de la Institución</label>
+                                            <input type="text" className="w-full p-2 border rounded font-medium text-slate-700" placeholder="Ej. Cambridge School of Languages" value={formData.school_name} onChange={e => setFormData({...formData, school_name: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-slate-400 text-xs uppercase mb-1">Título Rector</label>
+                                            <select className="w-full p-2 border rounded font-medium text-slate-700" value={formData.school_principal_title} onChange={e => setFormData({...formData, school_principal_title: e.target.value})}>
+                                                <option value="Lic.">Lic.</option>
+                                                <option value="Dr.">Dr.</option>
+                                                <option value="Dra.">Dra.</option>
+                                                <option value="Ing.">Ing.</option>
+                                                <option value="Mgs.">Mgs.</option>
+                                                <option value="Prof.">Prof.</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-slate-400 text-xs uppercase mb-1">Nombre Rector/Director</label>
+                                            <input type="text" className="w-full p-2 border rounded font-medium text-slate-700" placeholder="Ej. Tatiana Tinoco" value={formData.school_principal} onChange={e => setFormData({...formData, school_principal: e.target.value})} />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-slate-400 text-xs uppercase mb-1">Curso / Nivel Actual</label>
+                                            <input type="text" className="w-full p-2 border rounded font-medium text-slate-700" placeholder="Ej. 3ro de Bachillerato" value={formData.school_grade} onChange={e => setFormData({...formData, school_grade: e.target.value})} />
+                                        </div>
+                                    </div>
+                                </div>
                             </>
                         ) : (
                             <>
@@ -763,11 +811,51 @@ function GeneralTab({ player, assignments, refresh }) {
                                         </div>
                                     </div>
                                 )}
+                                {/* Education - View Mode */}
+                                {(player.school_name || player.school_grade) && (
+                                    <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                                        <h4 className="text-xs font-bold text-blue-400 uppercase mb-3 flex items-center gap-1.5">
+                                            <School size={13} /> Institución Educativa
+                                        </h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            <div className="md:col-span-2">
+                                                <span className="block text-slate-400 text-xs uppercase mb-1">Institución</span>
+                                                <span className="font-medium text-slate-700">{player.school_name || '-'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-slate-400 text-xs uppercase mb-1">Curso</span>
+                                                <span className="font-medium text-slate-700">{player.school_grade || '-'}</span>
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <span className="block text-slate-400 text-xs uppercase mb-1">Rector/Director</span>
+                                                <span className="font-medium text-slate-700">{player.school_principal_title || ''} {player.school_principal || '-'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Membership Certificate Button */}
+                                <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                                    <button
+                                        onClick={() => setMembershipCertOpen(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-sm font-bold transition-colors"
+                                    >
+                                        <Award size={16} /> Generar Certificado de Pertenencia
+                                    </button>
+                                </div>
                             </>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Membership Certificate Modal */}
+            <MembershipCertificateModal
+                isOpen={membershipCertOpen}
+                onClose={() => setMembershipCertOpen(false)}
+                player={player}
+                club={club}
+            />
 
             <div className="space-y-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">

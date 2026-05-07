@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { Save, User, Settings as SettingsIcon, Users, Link as LinkIcon, Copy, Trash2, Shield, Plus, Lock, Loader2 } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Save, User, Settings as SettingsIcon, Users, Link as LinkIcon, Copy, Trash2, Shield, Plus, Lock, Loader2, FileText, Upload, CheckCircle } from 'lucide-react'
+import { compressImage } from '../../utils/imageCompress'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useClubData } from '../../hooks/useClubData' // Hook
@@ -37,23 +38,30 @@ export default function Settings() {
       </div>
 
        {/* Tabs */}
-       <div className="flex gap-2 border-b border-slate-200 mb-6">
+       <div className="flex gap-2 border-b border-slate-200 mb-6 overflow-x-auto">
             <button 
                 onClick={() => setActiveTab('general')}
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-all ${activeTab === 'general' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-all whitespace-nowrap ${activeTab === 'general' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
             >
                 <SettingsIcon size={18} /> General
             </button>
             <button 
                 onClick={() => setActiveTab('staff')}
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-all ${activeTab === 'staff' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-all whitespace-nowrap ${activeTab === 'staff' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
             >
                 <Users size={18} /> Miembros y Staff
+            </button>
+            <button 
+                onClick={() => setActiveTab('certificates')}
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-all whitespace-nowrap ${activeTab === 'certificates' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            >
+                <FileText size={18} /> Certificados
             </button>
        </div>
 
        {activeTab === 'general' && <GeneralSettings club={club} canManage={canManage} />}
        {activeTab === 'staff' && <StaffSettings club={club} canManage={canManage} />}
+       {activeTab === 'certificates' && <CertificateSettings club={club} canManage={canManage} />}
     </div>
   )
 }
@@ -263,6 +271,225 @@ function GeneralSettings({ club, canManage }) {
                     </div>
                 )}
             </form>
+        </div>
+    )
+}
+
+// ─── Certificate Settings ──────────────────────────────────────────────────────
+
+function CertificateSettings({ club, canManage }) {
+    const signatureInputRef = useRef(null)
+    const [formData, setFormData] = useState({
+        coach_certificate_name: club.coach_certificate_name || '',
+        coach_certificate_title: club.coach_certificate_title || 'Entrenador',
+        ministerial_agreement: club.ministerial_agreement || '',
+        club_email: club.club_email || ''
+    })
+    const [signaturePreview, setSignaturePreview] = useState(club.coach_signature_url || null)
+    const [uploadingSignature, setUploadingSignature] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [saved, setSaved] = useState(false)
+
+    const handleSignatureUpload = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (!file.type.startsWith('image/')) { alert('Por favor selecciona una imagen válida (PNG recomendado).'); return }
+        setUploadingSignature(true)
+        try {
+            const compressed = await compressImage(file, 600, 0.9)
+            const path = `signatures/${club.id}/firma_entrenador.png`
+            const { error: uploadError } = await supabase.storage
+                .from('club-assets')
+                .upload(path, compressed, { upsert: true, contentType: 'image/png' })
+            if (uploadError) throw uploadError
+            const { data: { publicUrl } } = supabase.storage.from('club-assets').getPublicUrl(path)
+            const urlWithBust = `${publicUrl}?t=${Date.now()}`
+            await supabase.from('clubs').update({ coach_signature_url: publicUrl }).eq('id', club.id)
+            setSignaturePreview(urlWithBust)
+        } catch (err) {
+            alert('Error al subir la firma: ' + err.message)
+            console.error(err)
+        } finally {
+            setUploadingSignature(false)
+            if (signatureInputRef.current) signatureInputRef.current.value = ''
+        }
+    }
+
+    const handleRemoveSignature = async () => {
+        if (!confirm('¿Eliminar la firma actual?')) return
+        try {
+            await supabase.from('clubs').update({ coach_signature_url: null }).eq('id', club.id)
+            setSignaturePreview(null)
+        } catch (err) { alert('Error al eliminar firma: ' + err.message) }
+    }
+
+    const handleSave = async (e) => {
+        e.preventDefault()
+        if (!canManage) return
+        setSaving(true)
+        try {
+            const { error } = await supabase.from('clubs').update({
+                coach_certificate_name: formData.coach_certificate_name || null,
+                coach_certificate_title: formData.coach_certificate_title || null,
+                ministerial_agreement: formData.ministerial_agreement || null,
+                club_email: formData.club_email || null
+            }).eq('id', club.id)
+            if (error) throw error
+            setSaved(true)
+            setTimeout(() => setSaved(false), 3000)
+        } catch (err) {
+            alert('Error al guardar: ' + err.message)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    return (
+        <div className="space-y-6 max-w-2xl">
+
+            {/* Signature Upload Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 className="font-bold text-slate-900 mb-1 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <Upload size={18} className="text-primary" /> Firma Digital del Entrenador
+                </h3>
+                <p className="text-xs text-slate-400 mb-4">
+                    Sube una imagen PNG con fondo transparente de tu firma. Se usará automáticamente en todos los certificados generados.
+                </p>
+
+                {signaturePreview ? (
+                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <img
+                            src={signaturePreview}
+                            alt="Firma actual"
+                            className="h-16 object-contain bg-white border border-slate-200 rounded-lg px-3 py-1"
+                        />
+                        <div className="flex-1">
+                            <p className="text-sm font-bold text-slate-700">Firma cargada correctamente</p>
+                            <p className="text-xs text-slate-400">Se usará en todos los certificados</p>
+                        </div>
+                        {canManage && (
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={() => signatureInputRef.current?.click()}
+                                    disabled={uploadingSignature}
+                                    className="text-xs font-bold text-primary hover:underline"
+                                >
+                                    {uploadingSignature ? 'Subiendo...' : 'Cambiar'}
+                                </button>
+                                <button
+                                    onClick={handleRemoveSignature}
+                                    className="text-xs font-bold text-red-400 hover:underline"
+                                >
+                                    Eliminar
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div
+                        onClick={() => canManage && signatureInputRef.current?.click()}
+                        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+                            canManage ? 'border-slate-300 hover:border-primary hover:bg-primary/5 cursor-pointer' : 'border-slate-200 cursor-not-allowed'
+                        }`}
+                    >
+                        {uploadingSignature ? (
+                            <Loader2 className="mx-auto animate-spin text-primary mb-2" size={28} />
+                        ) : (
+                            <Upload size={28} className="mx-auto text-slate-300 mb-2" />
+                        )}
+                        <p className="text-sm font-medium text-slate-500">
+                            {uploadingSignature ? 'Subiendo firma...' : (canManage ? 'Clic para subir imagen de firma (PNG recomendado)' : 'Sin firma configurada')}
+                        </p>
+                        {canManage && <p className="text-xs text-slate-400 mt-1">PNG con fondo transparente da mejores resultados</p>}
+                    </div>
+                )}
+
+                <input
+                    ref={signatureInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleSignatureUpload}
+                />
+            </div>
+
+            {/* Certificate Data Form */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+                {!canManage && (
+                    <div className="absolute top-4 right-4 text-slate-400" title="Solo lectura">
+                        <Lock size={20} />
+                    </div>
+                )}
+                <h3 className="font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <FileText size={18} className="text-primary" /> Datos para los Certificados
+                </h3>
+                <form onSubmit={handleSave} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre del Entrenador (en certificados)</label>
+                            <input
+                                type="text"
+                                value={formData.coach_certificate_name}
+                                onChange={e => setFormData({ ...formData, coach_certificate_name: e.target.value })}
+                                disabled={!canManage}
+                                placeholder="Ej. Prof. Marcos Pérez Mosquera"
+                                className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 font-medium ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Cargo / Título</label>
+                            <input
+                                type="text"
+                                value={formData.coach_certificate_title}
+                                onChange={e => setFormData({ ...formData, coach_certificate_title: e.target.value })}
+                                disabled={!canManage}
+                                placeholder="Ej. Presidente, Entrenador Principal"
+                                className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Acuerdo Ministerial</label>
+                            <input
+                                type="text"
+                                value={formData.ministerial_agreement}
+                                onChange={e => setFormData({ ...formData, ministerial_agreement: e.target.value })}
+                                disabled={!canManage}
+                                placeholder="Ej. MD-CZ6-2021-035"
+                                className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`}
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Correo del Club (en certificados)</label>
+                            <input
+                                type="email"
+                                value={formData.club_email}
+                                onChange={e => setFormData({ ...formData, club_email: e.target.value })}
+                                disabled={!canManage}
+                                placeholder="clubejemplo@gmail.com"
+                                className={`w-full p-2 bg-slate-50 border rounded-lg text-slate-900 ${!canManage ? 'cursor-not-allowed opacity-75' : 'focus:ring-2 focus:ring-primary/20 outline-none border-slate-200'}`}
+                            />
+                        </div>
+                    </div>
+
+                    {canManage && (
+                        <div className="pt-2 flex justify-end items-center gap-3">
+                            {saved && (
+                                <span className="text-green-600 text-sm font-medium flex items-center gap-1">
+                                    <CheckCircle size={16} /> Guardado
+                                </span>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold shadow-lg shadow-primary/25 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                <Save size={18} />
+                                {saving ? 'Guardando...' : 'Guardar'}
+                            </button>
+                        </div>
+                    )}
+                </form>
+            </div>
         </div>
     )
 }

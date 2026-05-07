@@ -29,7 +29,12 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
         legal_rep_name: '',
         legal_rep_surname: '',
         legal_rep_phone: '',
-        legal_rep_dni: ''
+        legal_rep_dni: '',
+        // Education (for certificates)
+        school_name: '',
+        school_principal: '',
+        school_principal_title: 'Lic.',
+        school_grade: ''
     })
 
     // Club ID storage
@@ -53,7 +58,11 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                 legal_rep_name: '',
                 legal_rep_surname: '',
                 legal_rep_phone: '',
-                legal_rep_dni: ''
+                legal_rep_dni: '',
+                school_name: '',
+                school_principal: '',
+                school_principal_title: 'Lic.',
+                school_grade: ''
             })
             setError(null)
         }
@@ -176,7 +185,11 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                     legal_rep_name: formData.legal_rep_name || null,
                     legal_rep_surname: formData.legal_rep_surname || null,
                     legal_rep_phone: formData.legal_rep_phone || null,
-                    legal_rep_dni: formData.legal_rep_dni || null
+                    legal_rep_dni: formData.legal_rep_dni || null,
+                    school_name: formData.school_name || null,
+                    school_principal: formData.school_principal || null,
+                    school_principal_title: formData.school_principal_title || 'Lic.',
+                    school_grade: formData.school_grade || null
                 })
                 .select()
                 .single()
@@ -435,6 +448,61 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                                         placeholder="09XXXXXXXX"
                                         value={formData.legal_rep_phone}
                                         onChange={e => setFormData({ ...formData, legal_rep_phone: e.target.value.replace(/\D/g, '') })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Education Info (for certificates) */}
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                Institución Educativa
+                                <span className="text-[10px] font-normal normal-case bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full">Para certificados</span>
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Nombre de la Institución</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                                        placeholder="Ej. Cambridge School of Languages"
+                                        value={formData.school_name}
+                                        onChange={e => setFormData({ ...formData, school_name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Título del Rector</label>
+                                    <select
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                                        value={formData.school_principal_title}
+                                        onChange={e => setFormData({ ...formData, school_principal_title: e.target.value })}
+                                    >
+                                        <option value="Lic.">Lic.</option>
+                                        <option value="Dr.">Dr.</option>
+                                        <option value="Dra.">Dra.</option>
+                                        <option value="Ing.">Ing.</option>
+                                        <option value="Mgs.">Mgs.</option>
+                                        <option value="Prof.">Prof.</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Nombre del Rector/Director</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                                        placeholder="Ej. Tatiana Tinoco"
+                                        value={formData.school_principal}
+                                        onChange={e => setFormData({ ...formData, school_principal: e.target.value })}
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Curso / Nivel Actual</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                                        placeholder="Ej. 3ro de Bachillerato · Nivel Teens 8°"
+                                        value={formData.school_grade}
+                                        onChange={e => setFormData({ ...formData, school_grade: e.target.value })}
                                     />
                                 </div>
                             </div>

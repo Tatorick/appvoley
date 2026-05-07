@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Settings, Loader2, Save, Plus, Trash2, CheckCircle, XCircle, AlertCircle, MessageCircle, UserPlus, CalendarDays, Swords, Clock, Flag, ChevronDown, ChevronUp, Edit2, RotateCcw, Trophy, Search, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Settings, Loader2, Save, Plus, Trash2, CheckCircle, XCircle, AlertCircle, MessageCircle, UserPlus, CalendarDays, Swords, Clock, Flag, ChevronDown, ChevronUp, Edit2, RotateCcw, Trophy, Search, SlidersHorizontal, MoreVertical, FileText, Copy, Phone } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
 import TournamentPaymentModal from '../../components/Modals/TournamentPaymentModal'
 import AddPlayerModal from '../../components/Modals/AddPlayerModal'
 import CreateTournamentModal from '../../components/Modals/CreateTournamentModal'
+import CertificateModal from '../../components/Modals/CertificateModal'
 
 const SCHEDULE_PHASES = ['Fase de grupos', 'Cuartos de final', 'Semifinal', 'Tercer puesto', 'Final', 'Partido amistoso', 'Otro']
 
@@ -62,6 +63,12 @@ export default function TournamentDetails() {
     const [finishNotes, setFinishNotes] = useState('')
     const [savingFinish, setSavingFinish] = useState(false)
 
+    // Certificate Modal
+    const [certModalPlayer, setCertModalPlayer] = useState(null)
+
+    // Active dropdown menu per roster row
+    const [activeMenuId, setActiveMenuId] = useState(null)
+
     const canManage = role === 'owner' || role === 'admin' || role === 'coach'
 
     useEffect(() => {
@@ -81,10 +88,10 @@ export default function TournamentDetails() {
             if (tError) throw tError
             setTournament(tData)
 
-            // 2. Fetch Roster (include phone for WhatsApp)
+            // 2. Fetch Roster (include phone + education for certificate)
             const { data: rData, error: rError } = await supabase
                 .from('tournament_roster')
-                .select('*, players(id, first_name, last_name, position, phone)')
+                .select('*, players(id, first_name, last_name, position, phone, dni, school_name, school_principal, school_principal_title, school_grade)')
                 .eq('tournament_id', id)
 
             if (rError) throw rError
@@ -185,9 +192,7 @@ export default function TournamentDetails() {
         } catch (err) {
             alert('Error eliminando torneo: ' + err.message)
         }
-    }
-
-    // WhatsApp link helper
+    }    // WhatsApp link helper
     const buildWALink = (player) => {
         if (!player?.phone) return null
         const phone = player.phone.replace(/\D/g, '')
@@ -211,7 +216,7 @@ export default function TournamentDetails() {
             `📍 ${tournament?.location}\n` +
             costText + notesText + `\n` +
             `Por favor confirma tu participación respondiendo *SÍ* o *NO* a este mensaje.\n` +
-            `¡Esperamos contar contigo! 🏐`
+            `¡Esperamos contar contigo! 🏀`
         )
         return `https://wa.me/${intl}?text=${text}`
     }
@@ -824,6 +829,7 @@ export default function TournamentDetails() {
                             )}
                         </div>
 
+
                         {/* Add Player Area */}
                         {isAddingPlayer && (
                             <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 animate-in zoom-in-95">
@@ -939,57 +945,80 @@ export default function TournamentDetails() {
                                             </td>
                                             {canManage && (
                                                 <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        {/* WhatsApp button (only if phone exists) */}
-                                                        {waLink && (
-                                                            <a
-                                                                href={waLink}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                title="Enviar convocatoria por WhatsApp"
-                                                                className="p-1.5 rounded-lg text-green-500 hover:bg-green-50 transition-colors"
-                                                            >
-                                                                <MessageCircle size={15} />
-                                                            </a>
-                                                        )}
-                                                        {/* Unconfirm button — revert confirmed to pending */}
-                                                        {r.status === 'confirmed' && (
+                                                    <div className="flex items-center justify-end">
+                                                        {/* ⋯ Dropdown menu */}
+                                                        <div className="relative">
                                                             <button
-                                                                onClick={() => handleUpdateStatus(r.id, 'pending')}
-                                                                title="Volver a pendiente"
-                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 transition-colors"
+                                                                onClick={() => setActiveMenuId(activeMenuId === r.id ? null : r.id)}
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                                                title="Más opciones"
                                                             >
-                                                                <RotateCcw size={14} />
+                                                                <MoreVertical size={16} />
                                                             </button>
-                                                        )}
-                                                        {/* Confirm button */}
-                                                        {r.status !== 'confirmed' && (
-                                                            <button
-                                                                onClick={() => handleUpdateStatus(r.id, 'confirmed')}
-                                                                title="Marcar como confirmada"
-                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                                                            >
-                                                                <CheckCircle size={15} />
-                                                            </button>
-                                                        )}
-                                                        {/* Decline button */}
-                                                        {r.status !== 'declined' && (
-                                                            <button
-                                                                onClick={() => handleUpdateStatus(r.id, 'declined')}
-                                                                title="Marcar como no viaja"
-                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-colors"
-                                                            >
-                                                                <XCircle size={15} />
-                                                            </button>
-                                                        )}
-                                                        {/* Remove from roster */}
-                                                        <button
-                                                            onClick={() => handleRemoveFromRoster(r.id)}
-                                                            title="Quitar del torneo"
-                                                            className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
+                                                            {activeMenuId === r.id && (
+                                                                <div
+                                                                    className="absolute right-0 top-8 z-30 w-52 bg-white border border-slate-100 rounded-xl shadow-lg py-1 animate-in fade-in zoom-in-95"
+                                                                    onMouseLeave={() => setActiveMenuId(null)}
+                                                                >
+                                                                    {/* WhatsApp convocatoria */}
+                                                                    {waLink && (
+                                                                        <a
+                                                                            href={waLink}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            onClick={() => setActiveMenuId(null)}
+                                                                            className="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                                                                        >
+                                                                            <MessageCircle size={14} className="text-green-500" />
+                                                                            Enviar convocatoria WA
+                                                                        </a>
+                                                                    )}
+                                                                    {/* Confirm */}
+                                                                    {r.status !== 'confirmed' && (
+                                                                        <button
+                                                                            onClick={() => { handleUpdateStatus(r.id, 'confirmed'); setActiveMenuId(null) }}
+                                                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                                                                        >
+                                                                            <CheckCircle size={14} className="text-green-500" /> Confirmar asistencia
+                                                                        </button>
+                                                                    )}
+                                                                    {/* Revert to pending */}
+                                                                    {r.status === 'confirmed' && (
+                                                                        <button
+                                                                            onClick={() => { handleUpdateStatus(r.id, 'pending'); setActiveMenuId(null) }}
+                                                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-yellow-50 hover:text-yellow-700 transition-colors"
+                                                                        >
+                                                                            <RotateCcw size={14} className="text-yellow-500" /> Volver a pendiente
+                                                                        </button>
+                                                                    )}
+                                                                    {/* Decline */}
+                                                                    {r.status !== 'declined' && (
+                                                                        <button
+                                                                            onClick={() => { handleUpdateStatus(r.id, 'declined'); setActiveMenuId(null) }}
+                                                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                                                                        >
+                                                                            <XCircle size={14} className="text-orange-400" /> No viaja
+                                                                        </button>
+                                                                    )}
+                                                                    {/* ── Certificate ── */}
+                                                                    <div className="border-t border-slate-100 my-1" />
+                                                                    <button
+                                                                        onClick={() => { setCertModalPlayer(r.players); setActiveMenuId(null) }}
+                                                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                                                                    >
+                                                                        <FileText size={14} className="text-blue-500" /> Generar Certificado
+                                                                    </button>
+                                                                    {/* ── Remove ── */}
+                                                                    <div className="border-t border-slate-100 my-1" />
+                                                                    <button
+                                                                        onClick={() => { handleRemoveFromRoster(r.id); setActiveMenuId(null) }}
+                                                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                                                                    >
+                                                                        <Trash2 size={14} /> Quitar del torneo
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
                                             )}
@@ -1251,6 +1280,17 @@ export default function TournamentDetails() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* ── Certificate Modal ── */}
+            {certModalPlayer && (
+                <CertificateModal
+                    isOpen={!!certModalPlayer}
+                    onClose={() => setCertModalPlayer(null)}
+                    player={certModalPlayer}
+                    tournament={tournament}
+                    club={club}
+                />
             )}
         </div>
     )
