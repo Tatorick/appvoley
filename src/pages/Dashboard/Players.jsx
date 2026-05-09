@@ -42,6 +42,7 @@ export default function Players() {
   // Filters and Sort
   const [filterTeam, setFilterTeam] = useState('all')
   const [filterPosition, setFilterPosition] = useState('all')
+  const [filterGender, setFilterGender] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
 
@@ -114,6 +115,8 @@ export default function Players() {
     if (filterTeam !== 'all' && !p.team_assignments?.some(ta => ta.teams?.id === filterTeam)) return false
     // Position Filter
     if (filterPosition !== 'all' && p.position !== filterPosition) return false
+    // Gender Filter
+    if (filterGender !== 'all' && p.gender !== filterGender) return false
     // Search Term
     if (searchTerm) {
         const term = searchTerm.toLowerCase()
@@ -228,6 +231,15 @@ export default function Players() {
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Filter size={18} className="text-slate-400 shrink-0" />
+                    <select 
+                        className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full sm:w-auto p-2.5 outline-none"
+                        value={filterGender}
+                        onChange={(e) => setFilterGender(e.target.value)}
+                    >
+                        <option value="all">Todas las Ramas</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Masculino">Masculino</option>
+                    </select>
                     <select 
                         className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full sm:w-auto p-2.5 outline-none"
                         value={filterPosition}
