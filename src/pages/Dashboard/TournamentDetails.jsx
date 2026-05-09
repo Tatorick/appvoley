@@ -907,14 +907,14 @@ export default function TournamentDetails() {
                         )}
 
                         {/* Roster List */}
-                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 text-xs font-bold text-slate-400 uppercase">
                                     <tr>
-                                        <th className="px-4 py-3">Jugadora</th>
+                                        <th className="px-4 py-3 rounded-tl-2xl">Jugadora</th>
                                         <th className="px-4 py-3 hidden sm:table-cell">Posición</th>
                                         <th className="px-4 py-3">Estado</th>
-                                        {canManage && <th className="px-4 py-3 text-right">Acciones</th>}
+                                        {canManage && <th className="px-4 py-3 text-right rounded-tr-2xl">Acciones</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
