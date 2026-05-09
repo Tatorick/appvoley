@@ -168,6 +168,21 @@ export default function AddPlayerModal({ isOpen, onClose, onPlayerAdded }) {
                 }
             }
 
+            // PRE-CHECK: Verify Jersey Number uniqueness within the club
+            if (formData.jersey_number) {
+                const { data: existingPlayer, error: checkError } = await supabase
+                    .from('players')
+                    .select('id')
+                    .eq('club_id', clubId)
+                    .eq('jersey_number', parseInt(formData.jersey_number))
+                    .maybeSingle()
+
+                if (checkError) throw checkError
+                if (existingPlayer) {
+                    throw new Error(`El número de camiseta ${formData.jersey_number} ya está en uso por otro jugador del club.`)
+                }
+            }
+
             // 1. Insert Player (Core Data)
             const { data: playerData, error: insertError } = await supabase
                 .from('players')

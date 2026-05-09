@@ -410,7 +410,8 @@ function GeneralTab({ player, assignments, refresh }) {
         school_name: player.school_name || '',
         school_principal: player.school_principal || '',
         school_principal_title: player.school_principal_title || 'Lic.',
-        school_grade: player.school_grade || ''
+        school_grade: player.school_grade || '',
+        jersey_number: player.jersey_number || ''
     })
 
     // Membership certificate modal
@@ -489,6 +490,22 @@ function GeneralTab({ player, assignments, refresh }) {
                 throw new Error("La Cédula de Identidad no es válida.")
             }
 
+            // Validate Jersey Number uniqueness within the club
+            if (formData.jersey_number) {
+                const { data: existingPlayer, error: checkError } = await supabase
+                    .from('players')
+                    .select('id')
+                    .eq('club_id', player.club_id)
+                    .eq('jersey_number', parseInt(formData.jersey_number))
+                    .neq('id', player.id)
+                    .maybeSingle()
+                
+                if (checkError) throw checkError
+                if (existingPlayer) {
+                    throw new Error(`El número de camiseta ${formData.jersey_number} ya está en uso por otro jugador del club.`)
+                }
+            }
+
             const { error } = await supabase
                 .from('players')
                 .update({
@@ -499,6 +516,7 @@ function GeneralTab({ player, assignments, refresh }) {
                     gender: formData.gender,
                     height: formData.height ? parseInt(formData.height) : null,
                     position: formData.position,
+                    jersey_number: formData.jersey_number ? parseInt(formData.jersey_number) : null,
                     phone: formData.phone || null,
                     legal_rep_name: formData.legal_rep_name || null,
                     legal_rep_surname: formData.legal_rep_surname || null,
@@ -693,6 +711,13 @@ function GeneralTab({ player, assignments, refresh }) {
                                         <option value="Libero">Libero</option>
                                         <option value="Universal">Universal</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase mb-1">Dorsal (#)</label>
+                                    <input 
+                                        type="number" min="0" max="99" className="w-full p-2 border rounded font-medium text-slate-700"
+                                        value={formData.jersey_number} onChange={e => setFormData({...formData, jersey_number: e.target.value})}
+                                    />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-slate-400 text-xs uppercase mb-1">Teléfono / WhatsApp</label>
