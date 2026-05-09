@@ -393,6 +393,7 @@ function GeneralTab({ player, assignments, refresh }) {
     
     // Edit Mode State
     const [editing, setEditing] = useState(false)
+    const [error, setError] = useState(null)
     const [formData, setFormData] = useState({
         first_name: player.first_name,
         last_name: player.last_name,
@@ -484,25 +485,27 @@ function GeneralTab({ player, assignments, refresh }) {
 
     const handleSaveInfo = async () => {
         setLoading(true)
+        setError(null)
         try {
             // Validate DNI if present
             if (formData.dni && !validateId(formData.dni)) {
                 throw new Error("La Cédula de Identidad no es válida.")
             }
 
-            // Validate Jersey Number uniqueness within the club
+            // Validate Jersey Number uniqueness within the club and gender
             if (formData.jersey_number) {
                 const { data: existingPlayer, error: checkError } = await supabase
                     .from('players')
-                    .select('id')
+                    .select('id, first_name, last_name')
                     .eq('club_id', player.club_id)
+                    .eq('gender', formData.gender)
                     .eq('jersey_number', parseInt(formData.jersey_number))
                     .neq('id', player.id)
                     .maybeSingle()
                 
                 if (checkError) throw checkError
                 if (existingPlayer) {
-                    throw new Error(`El número de camiseta ${formData.jersey_number} ya está en uso por otro jugador del club.`)
+                    throw new Error(`El número de camiseta ${formData.jersey_number} ya está en uso por ${existingPlayer.first_name} ${existingPlayer.last_name} en la rama ${formData.gender}.`)
                 }
             }
 
@@ -533,7 +536,7 @@ function GeneralTab({ player, assignments, refresh }) {
             setEditing(false)
             refresh()
         } catch (err) {
-            alert(err.message)
+            setError(err.message)
         } finally {
             setLoading(false)
         }
@@ -630,6 +633,17 @@ function GeneralTab({ player, assignments, refresh }) {
                             <p className="text-xs text-slate-400 mt-1">Click en la foto para cambiarla • Auto-comprimida</p>
                         </div>
                     </div>
+
+                    {/* Error Alert */}
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-700 animate-in fade-in slide-in-from-top-2">
+                            <AlertCircle className="shrink-0 mt-0.5" size={20} />
+                            <div className="whitespace-pre-line text-sm">
+                                <h4 className="font-bold">Error</h4>
+                                {error}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-bold text-slate-900">Información Personal</h3>
