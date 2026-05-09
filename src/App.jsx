@@ -23,6 +23,7 @@ import Payments from './pages/Dashboard/Payments'
 import Tournaments from './pages/Dashboard/Tournaments'
 import TournamentDetails from './pages/Dashboard/TournamentDetails'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ClubProvider } from './context/ClubContext'
 import PortalLogin from './pages/Portal/PortalLogin'
 import PortalDashboard from './pages/Portal/PortalDashboard'
 import AdminLayout from './layouts/AdminLayout'
@@ -66,6 +67,7 @@ function App() {
     return (
         <Router>
             <AuthProvider>
+            <ClubProvider>
                 <Routes>
                     {/* Public Website */}
                     <Route path="/" element={<Landing />} />
@@ -135,6 +137,7 @@ function App() {
                     {/* Catch all */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+            </ClubProvider>
             </AuthProvider>
         </Router>
     )
