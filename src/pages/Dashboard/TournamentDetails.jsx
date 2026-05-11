@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Settings, Loader2, Save, Plus, Trash2, CheckCircle, XCircle, AlertCircle, MessageCircle, UserPlus, CalendarDays, Swords, Clock, Flag, ChevronDown, ChevronUp, Edit2, RotateCcw, Trophy, Search, SlidersHorizontal, MoreVertical, FileText, Copy, Phone } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Settings, Loader2, Save, Plus, Trash2, CheckCircle, XCircle, AlertCircle, MessageCircle, UserPlus, CalendarDays, Swords, Clock, Flag, ChevronDown, ChevronUp, Edit2, RotateCcw, Trophy, Search, SlidersHorizontal, MoreVertical, FileText, Copy, Phone, TrendingUp, TrendingDown, Minus, FileSpreadsheet, FileDown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useClubData } from '../../hooks/useClubData'
 import TournamentPaymentModal from '../../components/Modals/TournamentPaymentModal'
 import AddPlayerModal from '../../components/Modals/AddPlayerModal'
 import CreateTournamentModal from '../../components/Modals/CreateTournamentModal'
 import CertificateModal from '../../components/Modals/CertificateModal'
+import { EXPENSE_CATEGORIES, EXPENSE_EMOJI, exportRosterToExcel, exportRosterToPDF } from '../../utils/tournamentExport'
 
 const SCHEDULE_PHASES = ['Fase de grupos', 'Cuartos de final', 'Semifinal', 'Tercer puesto', 'Final', 'Partido amistoso', 'Otro']
 
@@ -68,6 +69,12 @@ export default function TournamentDetails() {
 
     // Active dropdown menu per roster row
     const [activeMenuId, setActiveMenuId] = useState(null)
+
+    // Expenses
+    const [expenses, setExpenses] = useState([])
+    const [isAddingExpense, setIsAddingExpense] = useState(false)
+    const [newExpense, setNewExpense] = useState({ category: 'Transporte', description: '', amount: '', expense_date: '' })
+    const [savingExpense, setSavingExpense] = useState(false)
 
     const canManage = role === 'owner' || role === 'admin' || role === 'coach'
 
@@ -144,6 +151,14 @@ export default function TournamentDetails() {
             if (pError) throw pError
             setPayments(pData || [])
 
+            // 4b. Fetch Expenses
+            const { data: expData } = await supabase
+                .from('tournament_expenses')
+                .select('*')
+                .eq('tournament_id', id)
+                .order('expense_date', { ascending: false })
+            setExpenses(expData || [])
+
             // 4. Fetch All Players (for adding to roster)
             const { data: apData } = await supabase
                 .from('players')
@@ -191,6 +206,47 @@ export default function TournamentDetails() {
             navigate('/app/tournaments')
         } catch (err) {
             alert('Error eliminando torneo: ' + err.message)
+        }
+    }
+
+    // --- Expense CRUD ---
+    const handleAddExpense = async () => {
+        if (!newExpense.amount || parseFloat(newExpense.amount) <= 0) {
+            alert('Ingresa un monto válido.')
+            return
+        }
+        setSavingExpense(true)
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            const { error } = await supabase
+                .from('tournament_expenses')
+                .insert({
+                    tournament_id: id,
+                    category: newExpense.category,
+                    description: newExpense.description.trim() || null,
+                    amount: parseFloat(newExpense.amount),
+                    expense_date: newExpense.expense_date || new Date().toISOString().slice(0, 10),
+                    created_by: user?.id || null
+                })
+            if (error) throw error
+            setNewExpense({ category: 'Transporte', description: '', amount: '', expense_date: '' })
+            setIsAddingExpense(false)
+            fetchTournamentDetails()
+        } catch (err) {
+            alert('Error al registrar gasto: ' + err.message)
+        } finally {
+            setSavingExpense(false)
+        }
+    }
+
+    const handleDeleteExpense = async (expenseId) => {
+        if (!confirm('¿Eliminar este gasto?')) return
+        try {
+            const { error } = await supabase.from('tournament_expenses').delete().eq('id', expenseId)
+            if (error) throw error
+            setExpenses(prev => prev.filter(e => e.id !== expenseId))
+        } catch (err) {
+            alert('Error al eliminar gasto: ' + err.message)
         }
     }    // WhatsApp link helper
     const buildWALink = (player) => {
@@ -441,6 +497,8 @@ export default function TournamentDetails() {
     const totalExpected = roster.length * (tournament.cost_per_player || 0)
     const totalCollected = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0)
     const pendingAmount = totalExpected - totalCollected
+    const totalExpenses = expenses.reduce((sum, e) => sum + parseFloat(e.amount), 0)
+    const balance = totalCollected - totalExpenses
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
@@ -811,22 +869,43 @@ export default function TournamentDetails() {
 
                         <div className="flex flex-wrap justify-between items-center gap-2">
                             <h3 className="font-bold text-slate-700">Lista de Convocadas</h3>
-                            {canManage && (
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setIsNewPlayerModalOpen(true)}
-                                        className="border border-primary text-primary px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary/5 transition-colors"
-                                    >
-                                        <UserPlus size={15} /> Nueva Jugadora
-                                    </button>
-                                    <button
-                                        onClick={() => setIsAddingPlayer(true)}
-                                        className="bg-primary text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-dark transition-colors"
-                                    >
-                                        <Plus size={16} /> Agregar Existente
-                                    </button>
-                                </div>
-                            )}
+                            <div className="flex flex-wrap items-center gap-2">
+                                {/* Export buttons — always visible when roster has players */}
+                                {roster.length > 0 && (
+                                    <>
+                                        <button
+                                            onClick={() => exportRosterToExcel(roster, tournament)}
+                                            title="Exportar a Excel"
+                                            className="border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
+                                        >
+                                            <FileSpreadsheet size={15} /> Excel
+                                        </button>
+                                        <button
+                                            onClick={() => exportRosterToPDF(roster, tournament, club)}
+                                            title="Generar ficha de inscripción PDF"
+                                            className="border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
+                                        >
+                                            <FileDown size={15} /> Ficha PDF
+                                        </button>
+                                    </>
+                                )}
+                                {canManage && (
+                                    <>
+                                        <button
+                                            onClick={() => setIsNewPlayerModalOpen(true)}
+                                            className="border border-primary text-primary px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary/5 transition-colors"
+                                        >
+                                            <UserPlus size={15} /> Nueva Jugadora
+                                        </button>
+                                        <button
+                                            onClick={() => setIsAddingPlayer(true)}
+                                            className="bg-primary text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-dark transition-colors"
+                                        >
+                                            <Plus size={16} /> Agregar Existente
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
 
@@ -1038,30 +1117,166 @@ export default function TournamentDetails() {
                     </div>
                 )}
 
-                {/* PAYMENTS TAB */}
+                {/* PAYMENTS / FINANZAS TAB */}
                 {activeTab === 'payments' && (
                     <div className="space-y-6">
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                        {/* ── 4 Summary Cards ─────────────────────────────────────── */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            {/* Recaudado */}
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                <p className="text-xs font-bold text-slate-400 uppercase">Costo Total (Est.)</p>
-                                <p className="text-2xl font-bold text-slate-800">${totalExpected.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                <p className="text-xs font-bold text-slate-400 uppercase">Recaudado</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase mb-1">Recaudado</p>
                                 <p className="text-2xl font-bold text-green-600">${totalCollected.toFixed(2)}</p>
+                                <p className="text-xs text-slate-400 mt-1">de ${totalExpected.toFixed(2)} esperado</p>
                             </div>
+                            {/* Gastos */}
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                <p className="text-xs font-bold text-slate-400 uppercase">Pendiente</p>
-                                <p className="text-2xl font-bold text-red-500">${pendingAmount.toFixed(2)}</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase mb-1">Gastos Reales</p>
+                                <p className="text-2xl font-bold text-orange-500">${totalExpenses.toFixed(2)}</p>
+                                <p className="text-xs text-slate-400 mt-1">{expenses.length} concepto{expenses.length !== 1 ? 's' : ''}</p>
+                            </div>
+                            {/* Balance */}
+                            <div className={`p-4 rounded-xl border shadow-sm ${balance >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+                                <p className="text-xs font-bold text-slate-400 uppercase mb-1">Balance</p>
+                                <p className={`text-2xl font-bold flex items-center gap-1 ${balance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                    {balance >= 0 ? <TrendingUp size={18}/> : <TrendingDown size={18}/>}
+                                    {balance >= 0 ? '+' : ''}{balance.toFixed(2)}
+                                </p>
+                                <p className={`text-xs mt-1 font-medium ${balance >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                                    {balance > 0 ? 'Superávit' : balance < 0 ? 'Déficit' : 'En punto de equilibrio'}
+                                </p>
+                            </div>
+                            {/* Pendiente por cobrar */}
+                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                                <p className="text-xs font-bold text-slate-400 uppercase mb-1">Por Cobrar</p>
+                                <p className={`text-2xl font-bold ${pendingAmount > 0 ? 'text-red-500' : 'text-slate-400'}`}>${Math.max(0, pendingAmount).toFixed(2)}</p>
+                                <p className="text-xs text-slate-400 mt-1">pendiente de jugadoras</p>
                             </div>
                         </div>
 
-                        {/* Player Payments Table */}
+                        {/* ── Gastos del Torneo ───────────────────────────────────── */}
+                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                            <div className="px-5 py-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                                <div>
+                                    <h3 className="font-bold text-slate-700">Gastos del Torneo</h3>
+                                    <p className="text-xs text-slate-400 mt-0.5">Costos operativos reales del club</p>
+                                </div>
+                                {canManage && !isAddingExpense && (
+                                    <button
+                                        onClick={() => setIsAddingExpense(true)}
+                                        className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
+                                    >
+                                        <Plus size={15}/> Agregar Gasto
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Inline form */}
+                            {isAddingExpense && (
+                                <div className="p-4 bg-orange-50 border-b border-orange-100 animate-in slide-in-from-top-2">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Categoría</label>
+                                            <select
+                                                value={newExpense.category}
+                                                onChange={e => setNewExpense({...newExpense, category: e.target.value})}
+                                                className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-300"
+                                            >
+                                                {EXPENSE_CATEGORIES.map(c => (
+                                                    <option key={c} value={c}>{EXPENSE_EMOJI[c]} {c}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Descripción</label>
+                                            <input
+                                                type="text"
+                                                value={newExpense.description}
+                                                onChange={e => setNewExpense({...newExpense, description: e.target.value})}
+                                                placeholder="Ej: Bus a Ibarra"
+                                                className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-300"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Monto ($) *</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={newExpense.amount}
+                                                onChange={e => setNewExpense({...newExpense, amount: e.target.value})}
+                                                placeholder="0.00"
+                                                className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-300"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 block">Fecha</label>
+                                            <input
+                                                type="date"
+                                                value={newExpense.expense_date}
+                                                onChange={e => setNewExpense({...newExpense, expense_date: e.target.value})}
+                                                className="p-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-300"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 mt-4">
+                                            <button onClick={() => { setIsAddingExpense(false); setNewExpense({ category: 'Transporte', description: '', amount: '', expense_date: '' }) }}
+                                                className="px-4 py-2 text-sm text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium">
+                                                Cancelar
+                                            </button>
+                                            <button onClick={handleAddExpense} disabled={savingExpense}
+                                                className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition-colors disabled:opacity-60 flex items-center gap-2">
+                                                {savingExpense ? <Loader2 size={14} className="animate-spin"/> : <Save size={14}/>} Guardar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Expense list */}
+                            {expenses.length === 0 && !isAddingExpense ? (
+                                <div className="p-8 text-center">
+                                    <DollarSign size={32} className="mx-auto mb-2 text-slate-200"/>
+                                    <p className="text-slate-400 text-sm">No hay gastos registrados aún.</p>
+                                    {canManage && <p className="text-slate-300 text-xs mt-1">Usa "Agregar Gasto" para registrar un costo del torneo.</p>}
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-50">
+                                    {expenses.map(e => (
+                                        <div key={e.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50/50 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xl">{EXPENSE_EMOJI[e.category] || '📦'}</span>
+                                                <div>
+                                                    <p className="font-semibold text-slate-700 text-sm">
+                                                        {e.category}
+                                                        {e.description && <span className="font-normal text-slate-500"> · {e.description}</span>}
+                                                    </p>
+                                                    <p className="text-xs text-slate-400">
+                                                        {e.expense_date ? new Date(e.expense_date + 'T12:00:00').toLocaleDateString('es-EC', {day:'2-digit', month:'short'}) : '—'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-bold text-orange-600 text-sm">${parseFloat(e.amount).toFixed(2)}</span>
+                                                {canManage && (
+                                                    <button onClick={() => handleDeleteExpense(e.id)}
+                                                        className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                                        <Trash2 size={13}/>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Ingresos: Pagos por Jugadora ─────────────────────────── */}
                         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                             <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                                <h3 className="font-bold text-slate-700">Estado de Cuenta por Jugador</h3>
-                                <p className="text-xs text-slate-400">Costo Base: <strong>${tournament.cost_per_player}</strong></p>
+                                <h3 className="font-bold text-slate-700">Ingresos — Pagos por Jugadora</h3>
+                                <p className="text-xs text-slate-400">Costo base: <strong>${tournament.cost_per_player}</strong></p>
                             </div>
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 text-xs font-bold text-slate-400 uppercase">
@@ -1077,7 +1292,6 @@ export default function TournamentDetails() {
                                         const paid = payments.filter(p => p.player_id === r.player_id).reduce((sum, p) => sum + parseFloat(p.amount), 0)
                                         const pending = (tournament.cost_per_player || 0) - paid
                                         const isFullyPaid = pending <= 0
-
                                         return (
                                             <tr key={r.id} className="hover:bg-slate-50/50">
                                                 <td className="px-6 py-3 font-medium text-slate-800">
@@ -1088,17 +1302,14 @@ export default function TournamentDetails() {
                                                 </td>
                                                 <td className="px-6 py-3 text-right">
                                                     {isFullyPaid ? (
-                                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Pagado</span>
+                                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Pagado ✓</span>
                                                     ) : (
                                                         <span className="font-bold text-red-500">${pending.toFixed(2)}</span>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-3 text-right">
                                                     <button
-                                                        onClick={() => {
-                                                            setSelectedPlayerForPayment(r.players)
-                                                            setIsPaymentModalOpen(true)
-                                                        }}
+                                                        onClick={() => { setSelectedPlayerForPayment(r.players); setIsPaymentModalOpen(true) }}
                                                         className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-slate-700 transition-colors"
                                                     >
                                                         Registrar Pago
@@ -1112,7 +1323,7 @@ export default function TournamentDetails() {
                         </div>
 
                         {/* Recent Transactions */}
-                        <div className="mt-8">
+                        <div>
                             <h4 className="text-sm font-bold text-slate-400 uppercase mb-3">Historial de Transacciones</h4>
                             <div className="space-y-2">
                                 {payments.map(p => (
@@ -1129,6 +1340,7 @@ export default function TournamentDetails() {
                         </div>
                     </div>
                 )}
+
 
                 {/* GENERAL TAB */}
                 {activeTab === 'general' && (
@@ -1227,6 +1439,29 @@ export default function TournamentDetails() {
                         </div>
 
                         <div className="space-y-4">
+                            {/* Financial summary */}
+                            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
+                                <p className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1.5">
+                                    <DollarSign size={12}/> Resumen Financiero Final
+                                </p>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="text-center">
+                                        <p className="text-xs text-slate-400 mb-0.5">Recaudado</p>
+                                        <p className="font-bold text-green-600">${totalCollected.toFixed(2)}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-xs text-slate-400 mb-0.5">Gastos</p>
+                                        <p className="font-bold text-orange-500">${totalExpenses.toFixed(2)}</p>
+                                    </div>
+                                    <div className={`text-center rounded-lg py-1 ${balance >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                                        <p className="text-xs text-slate-400 mb-0.5">Balance</p>
+                                        <p className={`font-bold ${balance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                            {balance >= 0 ? '+' : ''}{balance.toFixed(2)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">
                                     ¿En qué posición quedó el equipo? *
