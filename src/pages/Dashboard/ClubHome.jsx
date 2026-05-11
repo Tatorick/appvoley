@@ -68,7 +68,7 @@ export default function ClubHome() {
           supabase.from('players').select('*', { count: 'exact', head: true }).eq('club_id', club.id),
           supabase.from('teams').select('*', { count: 'exact', head: true }).eq('club_id', club.id),
           supabase.from('match_posts').select('*', { count: 'exact', head: true }).eq('club_id', club.id).eq('status', 'open'),
-          supabase.from('treasury_movements').select('amount, type').eq('club_id', club.id)
+          supabase.from('treasury_movements').select('amount, type').eq('club_id', club.id).is('deleted_at', null)
       ])
 
       // Calc Balance

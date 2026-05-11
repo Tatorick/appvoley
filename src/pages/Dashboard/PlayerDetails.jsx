@@ -161,6 +161,7 @@ function PaymentsTab({ player }) {
                 .select('*')
                 .eq('player_id', player.id)
                 .eq('type', 'income')
+                .is('deleted_at', null)
                 .or(`payment_month.gte.${startOfYear},and(payment_month.lte.${endOfYear}),date.gte.${startOfYear},and(date.lte.${endOfYear})`)
             
             // Note: The OR logic above might be mixed. Simpler: fetch all incomes for player, filter in JS.
